@@ -18,6 +18,6 @@ internal class Program
         //
 
         IHost host = horizon.Build();
-        await host.RunAsync(horizon.CancellationToken.Token);
+        await host.RunAsync(horizon);
     }
 }
