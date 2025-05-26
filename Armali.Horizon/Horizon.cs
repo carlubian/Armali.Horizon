@@ -1,4 +1,5 @@
 ﻿using Armali.Horizon.Logs;
+using Armali.Horizon.Messaging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -16,10 +17,9 @@ public class Horizon(string[] args)
     /// The Cancellation Token used to launch and manage the lifecycle of the app.
     /// </summary>
     public CancellationTokenSource CancellationToken {  get; private set; } = new();
+#pragma warning disable CS8618
     public static IConfigurationRoot Configuration { get; private set; }
-
-    internal static string _nodeName = "Unknown node";
-    internal static string _appName = "Unknown app";
+#pragma warning restore CS8618
 
     private readonly HostApplicationBuilder _builder = Host.CreateApplicationBuilder(args);
 
@@ -28,16 +28,10 @@ public class Horizon(string[] args)
     }
 
     /// <summary>
-    /// Configures basic launch parameters of the Horizon app.
+    /// Configures basic parameters of the Horizon app.
     /// </summary>
-    /// <param name="hostName">A name to identify the device in which the app is hosted.</param>
-    /// <param name="appName">A name to identify the app inside the device.</param>
-    public Horizon Initialize(string hostName, string appName)
+    public Horizon Initialize()
     {
-        // Deployment information
-        _nodeName = hostName;
-        _appName = appName;
-
         // Configuration system
         Configuration = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json")
@@ -78,10 +72,28 @@ public class Horizon(string[] args)
         {
             builder.AddConsole();
             builder.AddSerilog();
+            builder.AddFilter(Configuration["Horizon:Component"] ?? "Horizon", 
+                (LogLevel)Enum.Parse(typeof(LogLevel), Configuration["Horizon:Logs:LogLevel"] ?? "Debug"));
         });
-        Microsoft.Extensions.Logging.ILogger logger = factory.CreateLogger("Armali Horizon");
+        Microsoft.Extensions.Logging.ILogger logger = factory.CreateLogger(Configuration["Horizon:Component"] ?? "Horizon");
 
         _builder.Services.AddSingleton<IHorizonLogger>(new HorizonLogger(logger));
+
+        return this;
+    }
+
+    public Horizon AddMessaging()
+    {
+        _builder.Services.AddSingleton<IHorizonMessaging>(provider =>
+        {
+            var logService = provider.GetRequiredService<IHorizonLogger>();
+            var msgService = new HorizonMessaging(logService);
+            var endpoint = Configuration["Horizon:Messaging:Endpoint"] ?? "localhost:6400";
+            msgService.SetConnection(endpoint);
+
+            return msgService;
+        });
+        _builder.Services.AddSingleton<IHostedService, IHorizonMessaging>(provider => provider.GetRequiredService<IHorizonMessaging>());
 
         return this;
     }

@@ -9,12 +9,13 @@ internal class Program
     static async Task Main(string[] args)
     {
         var horizon = new Horizon(args);
-        horizon.Initialize("Debug", "Horizon Test")
+        horizon.Initialize()
             .AddTermination()
-            .AddLogging();
+            .AddLogging()
+            .AddMessaging();
 
         // Add app-specific services here
-        horizon.Services.AddHostedService<TestService>();
+        horizon.Services.AddSingleton<IHostedService, TestService>();
         //
 
         IHost host = horizon.Build();
