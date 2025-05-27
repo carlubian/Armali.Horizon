@@ -90,6 +90,7 @@ public class Horizon(string[] args)
             var msgService = new HorizonMessaging(logService);
             var endpoint = Configuration["Horizon:Messaging:Endpoint"] ?? "localhost:6400";
             msgService.SetConnection(endpoint);
+            msgService.SetComponent(Configuration["Horizon:Component"] ?? "Horizon");
 
             return msgService;
         });

@@ -1,5 +1,7 @@
 ﻿using Armali.Horizon.Logs;
+using Armali.Horizon.Messaging.Model;
 using StackExchange.Redis;
+using System.Text.Json;
 
 namespace Armali.Horizon.Messaging;
 
@@ -7,6 +9,7 @@ public class HorizonMessaging(IHorizonLogger log) : IHorizonMessaging
 {
     private readonly IHorizonLogger _log = log;
     private string _connectionString = "localhost:6400";
+    private string _component = "Horizon";
 
 #pragma warning disable CS8618 // These fields are set by StartAsync, called automatically by the host
     private ConnectionMultiplexer _conn;
@@ -20,10 +23,23 @@ public class HorizonMessaging(IHorizonLogger log) : IHorizonMessaging
         _connectionString = connectionString;
     }
 
-    public async Task SendMessage(object message)
+    public void SetComponent(string component)
     {
-        var response = await _db.ExecuteAsync("PING", message);
-        OnMessageReceived?.Invoke(response);
+        _component = component;
+    }
+
+    public async Task SendMessage(string eventName, IMessagePayload message)
+    {
+        // Serialize the message payload to JSON
+        var json = JsonSerializer.Serialize(message);
+
+        var response = await _db.ExecuteAsync("PING", json);
+
+        // Partial deserialization to base MessagePayload
+        var basePayload = JsonSerializer.Deserialize<MessagePayload>(json);
+        basePayload!.RawData = response.ToString();
+
+        OnMessageReceived?.Invoke(basePayload!); // TODO Allow clients to subscribe to specific events
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)

@@ -12,26 +12,26 @@ public class HorizonLogger(ILogger logger) : IHorizonLogger
 
     public void Trace(string template, params object[] segments)
     {
-        _logger.LogDebug($"{{Class}}:{{Method}}".Pastel(ConsoleColor.Cyan) + $" {template}".Pastel(ConsoleColor.White), 
-            GetCallerFromStack().Union(segments).ToArray());
+        _logger.LogDebug($"{{Class}}:{{Method}}".Pastel(ConsoleColor.Cyan) + $" {template}".Pastel(ConsoleColor.White),
+            [.. GetCallerFromStack().Union(segments)]);
     }
 
     public void Info(string template, params object[] segments)
     {
-        _logger.LogInformation($"{{Class}}:{{Method}}".Pastel(ConsoleColor.Cyan) + $" {template}".Pastel(ConsoleColor.White), 
-            GetCallerFromStack().Union(segments).ToArray());
+        _logger.LogInformation($"{{Class}}:{{Method}}".Pastel(ConsoleColor.Cyan) + $" {template}".Pastel(ConsoleColor.White),
+            [.. GetCallerFromStack().Union(segments)]);
     }
 
     public void Warning(string template, params object[] segments)
     {
         _logger.LogWarning($"{{Class}}:{{Method}}".Pastel(ConsoleColor.Cyan) + $" {template}".Pastel(ConsoleColor.White), 
-            GetCallerFromStack().Union(segments).ToArray());
+            [.. GetCallerFromStack().Union(segments)]);
     }
 
     public void Error(string template, params object[] segments)
     {
         _logger.LogError($"{{Class}}:{{Method}}".Pastel(ConsoleColor.Cyan) + $" {template}".Pastel(ConsoleColor.White), 
-            GetCallerFromStack().Union(segments).ToArray());
+            [.. GetCallerFromStack().Union(segments)]);
     }
 
     #pragma warning disable CA1822
