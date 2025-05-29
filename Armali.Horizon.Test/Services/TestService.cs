@@ -17,6 +17,7 @@ internal class TestService(IHorizonLogger log, AppTermination termination, IHori
         _log.Info("Hello, world");
 
         _messaging.OnMessageReceived += LogMessageReceived;
+        _messaging.Listen("Ping");
         await _messaging.SendMessage("Ping", new PingMessagePayload());
 
         _termination.Terminate();
