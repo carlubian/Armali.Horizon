@@ -31,6 +31,14 @@ public interface IHorizonMessaging : IHostedService
     void Listen(string eventName);
 
     /// <summary>
+    /// Subscribe to a specific event name from a specific component to receive messages. Received events will trigger the OnMessageReceived event.
+    /// The client can subscribe to multiple events, and all messages will be routed to the OnMessageReceived event handler.
+    /// </summary>
+    /// <param name="component">The name of the component that produces the event</param>
+    /// <param name="eventName">The name of the event to subscribe to</param>
+    void Listen(string component, string eventName);
+
+    /// <summary>
     /// Event triggered when a message is received. 
     /// The message can be deserialized into a specific type using the Deserialize method.
     /// </summary>

@@ -43,7 +43,12 @@ public class HorizonMessaging(IHorizonLogger log) : IHorizonMessaging
 
     public void Listen(string eventName)
     {
-        var channel = $"horizon:{_component}:{eventName}";
+        Listen(_component, eventName);
+    }
+
+    public void Listen(string component, string eventName)
+    {
+        var channel = $"horizon:{component}:{eventName}";
         var subscriber = _conn.GetSubscriber();
 
         subscriber.Subscribe(channel, (channel, message) =>
