@@ -1,7 +1,15 @@
 <Solution>
-  <Project Path="src/Armali.Horizon.Autoconfig/Armali.Horizon.Autoconfig.csproj" />
-  <Project Path="src/Armali.Horizon.Blazor/Armali.Horizon.Blazor.csproj" />
-  <Project Path="src/Armali.Horizon.Core/Armali.Horizon.Core.csproj" />
-  <Project Path="src/Armali.Horizon.IO/Armali.Horizon.IO.csproj" />
-  <Project Path="src/Armali.Horizon.Segaris/Armali.Horizon.Segaris.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/Armali.Horizon.Autoconfig/Armali.Horizon.Autoconfig.csproj" />
+    <Project Path="src/Armali.Horizon.Blazor/Armali.Horizon.Blazor.csproj" />
+    <Project Path="src/Armali.Horizon.Core/Armali.Horizon.Core.csproj" />
+    <Project Path="src/Armali.Horizon.IO/Armali.Horizon.IO.csproj" />
+    <Project Path="src/Armali.Horizon.Segaris/Armali.Horizon.Segaris.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Armali.Horizon.Core.Tests/Armali.Horizon.Core.Tests.csproj" />
+    <Project Path="test/Armali.Horizon.IO.Tests/Armali.Horizon.IO.Tests.csproj" />
+    <Project Path="test/Armali.Horizon.Segaris.Tests/Armali.Horizon.Segaris.Tests.csproj" />
+    <Project Path="test/Armali.Horizon.Autoconfig.Tests/Armali.Horizon.Autoconfig.Tests.csproj" />
+  </Folder>
 </Solution>

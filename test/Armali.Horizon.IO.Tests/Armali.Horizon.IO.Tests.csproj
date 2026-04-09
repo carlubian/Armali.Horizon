@@ -1,0 +1,8 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Armali.Horizon.IO\Armali.Horizon.IO.csproj" />
+    </ItemGroup>
+
+</Project>
+

@@ -1,0 +1,44 @@
+﻿name: CI – Build & Test
+
+on:
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # Tailwind se compila con un binario local de Windows (tailwindcss.exe),
+      # por lo que se omite en CI y se confía en el CSS ya generado o en el
+      # paso de Docker que lo maneja por separado.
+      - name: Restore dependencies
+        run: dotnet restore Armali.Horizon.slnx
+
+      - name: Build solution
+        run: dotnet build Armali.Horizon.slnx --no-restore -c Release /p:SkipTailwindBuild=true
+
+      - name: Run tests
+        run: dotnet test Armali.Horizon.slnx --no-build -c Release --logger "trx;LogFileName=results.trx" --results-directory ./TestResults
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults/**/*.trx
+

@@ -1,0 +1,191 @@
+﻿using Armali.Horizon.Segaris.Model;
+using Armali.Horizon.Segaris.Services;
+
+namespace Armali.Horizon.Segaris.Tests;
+
+[TestClass]
+public class ClothesServiceTests
+{
+    private TestDbContextFactory _factory = null!;
+    private ClothesService _service = null!;
+
+    [TestInitialize]
+    public void Setup()
+    {
+        _factory = new TestDbContextFactory();
+        _service = new ClothesService(_factory);
+    }
+
+    [TestCleanup]
+    public void Cleanup() => _factory.Dispose();
+
+    // ── GetClothesCategories ─────────────────────────────────
+
+    [TestMethod]
+    public async Task GetClothesCategories_ReturnsSeedData()
+    {
+        var categories = await _service.GetClothesCategories();
+
+        categories.ShouldNotBeEmpty();
+        categories.Count.ShouldBe(11);
+        categories.ShouldContain(c => c.Name == "Short T-Shirt");
+    }
+
+    // ── GetClothesStatuses ───────────────────────────────────
+
+    [TestMethod]
+    public async Task GetClothesStatuses_ReturnsSeedData()
+    {
+        var statuses = await _service.GetClothesStatuses();
+
+        statuses.Count.ShouldBe(3);
+        statuses.ShouldContain(s => s.Name == "Planning" && s.Color == "blue");
+        statuses.ShouldContain(s => s.Name == "Active" && s.Color == "green");
+        statuses.ShouldContain(s => s.Name == "Retired" && s.Color == "red");
+    }
+
+    // ── GetClothesWashTypes ──────────────────────────────────
+
+    [TestMethod]
+    public async Task GetClothesWashTypes_ReturnsSeedData()
+    {
+        var washTypes = await _service.GetClothesWashTypes();
+
+        washTypes.Count.ShouldBe(4);
+        washTypes.ShouldContain(w => w.Name == "White Wash");
+        washTypes.ShouldContain(w => w.Name == "Color Wash");
+        washTypes.ShouldContain(w => w.Name == "Special Wash");
+        washTypes.ShouldContain(w => w.Name == "Wash Alone");
+    }
+
+    // ── AddClothes + GetClothesEntities ──────────────────────
+
+    [TestMethod]
+    public async Task AddClothes_AndRetrieve_ReturnsEntity()
+    {
+        var entity = new ClothesEntity
+        {
+            Name = "Test Garment",
+            Date = new DateTime(2026, 1, 15),
+            GarmentCode = "GRM-001",
+            CategoryId = 1,
+            StatusId = 1,
+            WashTypeId = 1,
+            IsPrivate = false,
+            Creator = "user1"
+        };
+
+        await _service.AddClothes(entity);
+
+        var all = await _service.GetClothesEntities("user1");
+        all.Count.ShouldBe(1);
+        all[0].Name.ShouldBe("Test Garment");
+        all[0].GarmentCode.ShouldBe("GRM-001");
+    }
+
+    // ── Privacy filtering ────────────────────────────────────
+
+    [TestMethod]
+    public async Task GetClothesEntities_FiltersPrivateEntitiesFromOthers()
+    {
+        // Entidad pública de user1 — visible para todos
+        await _service.AddClothes(new ClothesEntity
+        {
+            Name = "Publico",
+            Date = DateTime.Now,
+            GarmentCode = "PUB-001",
+            CategoryId = 1,
+            StatusId = 1,
+            WashTypeId = 1,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        // Entidad privada de user1 — solo visible para user1
+        await _service.AddClothes(new ClothesEntity
+        {
+            Name = "Privado User1",
+            Date = DateTime.Now,
+            GarmentCode = "PRV-001",
+            CategoryId = 1,
+            StatusId = 1,
+            WashTypeId = 2,
+            IsPrivate = true,
+            Creator = "user1"
+        });
+
+        // user1 ve ambas
+        var user1Results = await _service.GetClothesEntities("user1");
+        user1Results.Count.ShouldBe(2);
+
+        // user2 solo ve la pública
+        var user2Results = await _service.GetClothesEntities("user2");
+        user2Results.Count.ShouldBe(1);
+        user2Results[0].Name.ShouldBe("Publico");
+    }
+
+    // ── UpdateClothes ────────────────────────────────────────
+
+    [TestMethod]
+    public async Task UpdateClothes_ModifiesEntity()
+    {
+        var entity = new ClothesEntity
+        {
+            Name = "Original",
+            Date = DateTime.Now,
+            GarmentCode = "ORI-001",
+            CategoryId = 1,
+            StatusId = 1,
+            WashTypeId = 1,
+            IsPrivate = false,
+            Creator = "user1"
+        };
+
+        await _service.AddClothes(entity);
+
+        // Actualizar
+        entity.Name = "Modificado";
+        entity.GarmentCode = "MOD-001";
+        await _service.UpdateClothes(entity);
+
+        var all = await _service.GetClothesEntities("user1");
+        all.Count.ShouldBe(1);
+        all[0].Name.ShouldBe("Modificado");
+        all[0].GarmentCode.ShouldBe("MOD-001");
+    }
+
+    // ── DeleteClothes ────────────────────────────────────────
+
+    [TestMethod]
+    public async Task DeleteClothes_RemovesEntity()
+    {
+        var entity = new ClothesEntity
+        {
+            Name = "Para eliminar",
+            Date = DateTime.Now,
+            GarmentCode = "DEL-001",
+            CategoryId = 1,
+            StatusId = 1,
+            WashTypeId = 1,
+            IsPrivate = false,
+            Creator = "user1"
+        };
+
+        await _service.AddClothes(entity);
+        var all = await _service.GetClothesEntities("user1");
+        all.Count.ShouldBe(1);
+
+        await _service.DeleteClothes(entity.Id);
+
+        var afterDelete = await _service.GetClothesEntities("user1");
+        afterDelete.ShouldBeEmpty();
+    }
+
+    [TestMethod]
+    public async Task DeleteClothes_NonExistentId_DoesNotThrow()
+    {
+        // No debe lanzar excepción al intentar eliminar un ID que no existe
+        await Should.NotThrowAsync(() => _service.DeleteClothes(9999));
+    }
+}
+
