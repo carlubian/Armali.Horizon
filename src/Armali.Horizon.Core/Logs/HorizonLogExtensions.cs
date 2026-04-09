@@ -26,11 +26,15 @@ public static class HorizonLogExtensions
                     .MinimumLevel.Override("Microsoft", LogEventLevel.Warning) // Reducir ruido de .NET
                     .Enrich.FromLogContext()
                     .Enrich.WithProperty("Environment", context.HostingEnvironment.EnvironmentName)
-                    // AQUI AÑADIMOS NUESTRO ENRICHER
-                    .Enrich.With(new HorizonCallerEnricher()) 
+                    .Enrich.With(new HorizonCallerEnricher())
                     .WriteTo.Console(outputTemplate: 
-                        "[{Timestamp:HH:mm:ss} {Level:u3}] [{ClassName}.{MethodName}] {Message:lj}{NewLine}{Exception}") // Salida 1: Consola
-                    .WriteTo.Seq(settings.Endpoint, apiKey: settings.ApiKey); // Salida 2: Seq
+                        "[{Timestamp:HH:mm:ss} {Level:u3}] [{ClassName}.{MethodName}] {Message:lj}{NewLine}{Exception}")
+                    // Seq: WriteTo es fire-and-forget con buffer interno y reintentos automáticos.
+                    // Si Seq no está disponible, los eventos se descartan silenciosamente sin afectar a la app.
+                    .WriteTo.Seq(
+                        settings.Endpoint,
+                        apiKey: settings.ApiKey,
+                        queueSizeLimit: settings.QueueSizeLimit);
             })
             .ConfigureServices((context, services) =>
             {

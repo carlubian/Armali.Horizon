@@ -2,9 +2,13 @@ using Armali.Horizon.Autoconfig;
 using Armali.Horizon.Autoconfig.Components;
 using Armali.Horizon.Autoconfig.Services;
 using Armali.Horizon.Blazor.Services;
+using Armali.Horizon.Core.Logs;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Logging centralizado con Serilog + Seq
+builder.Host.UseHorizonLogging();
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
@@ -13,7 +17,7 @@ builder.Services.AddRazorComponents()
 builder.Services.AddScoped<HorizonSessionService>();
 
 builder.Services.AddDbContextFactory<AutoconfigDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("Autoconfig")));
+    options.UseSqlite(builder.Configuration.GetSection("Horizon")["ConnectionStrings:Autoconfig"]));
 builder.Services.AddScoped<AutoconfigService>();
 
 var app = builder.Build();
