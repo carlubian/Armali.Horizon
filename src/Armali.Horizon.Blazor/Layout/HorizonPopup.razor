@@ -1,0 +1,60 @@
+﻿
+@if (Visible)
+{
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-hz-styx/50 p-12"
+         @onmousedown="HandleOverlayMouseDown"
+         @onmouseup="HandleOverlayMouseUp">
+        <div class="max-h-full max-w-full"
+             @onmousedown:stopPropagation 
+             @onmouseup:stopPropagation
+             @onclick:stopPropagation>
+            @if (ChildContent != null)
+            {
+                @ChildContent
+            }
+            else
+            {
+                <div class="h-32 w-32"></div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public bool Visible { get; set; }
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> OnCanceled { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+    
+    private bool _mouseDownOnOverlay;
+
+    private void HandleOverlayMouseDown()
+    {
+        // El usuario presionó el botón en el área gris
+        _mouseDownOnOverlay = true;
+    }
+
+    private async Task HandleOverlayMouseUp()
+    {
+        // Si el usuario presionó Y soltó en el área gris, cerramos.
+        if (_mouseDownOnOverlay)
+        {
+            await Close();
+        }
+        // Reseteamos el estado
+        _mouseDownOnOverlay = false;
+    }
+
+    private async Task Close()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(Visible);
+        await OnCanceled.InvokeAsync(false);
+    }
+}

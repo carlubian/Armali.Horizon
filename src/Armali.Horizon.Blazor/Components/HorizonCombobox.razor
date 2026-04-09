@@ -1,0 +1,142 @@
+﻿@typeparam TItem
+
+<div class="relative w-full">
+    <!-- Elemento Principal (Trigger) -->
+    <div @onclick="Toggle" class="cursor-pointer">
+        <div class="rounded-xl overflow-hidden bg-hz-styx text-hz-arendelle font-hz-text shadow-xl h-10 flex flex-row items-center justify-between">
+            <span class="truncate flex-1 px-2">
+                @if (Value == null)
+                {
+                    <HorizonLabelText Text="@Placeholder"/>
+                }
+                else if (ItemTemplate != null)
+                {
+                    @ItemTemplate(Value)
+                }
+                else
+                {
+                    <HorizonLabelText Text="@Value.ToString()"/>
+                }
+            </span>
+            <!-- Icono indicador -->
+            <div class=@($"flex h-full bg-{Color} items-center justify-center")>
+                @if (IsOpen)
+                {
+                    <i class=@($"inline-block align-middle text-hz-arendelle text-3xl fa-solid fa-chevron-up")></i>
+                }
+                else
+                {
+                    <i class=@($"inline-block align-middle text-hz-arendelle text-3xl fa-solid fa-chevron-down")></i>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Cuadro Desplegable -->
+    @if (IsOpen)
+    {
+        <div class="absolute left-0 right-0 top-full mt-2 z-50 rounded-xl bg-hz-styx border border-hz-gray shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2">
+            @if (DropdownTemplate != null)
+            {
+                <!-- Permite control total del contenedor desplegable -->
+                @DropdownTemplate(Items)
+            }
+            else
+            {
+                <!-- Lista por defecto -->
+                @if (Items != null && Items.Any())
+                {
+                    <ul class="max-h-80 overflow-y-auto py-1">
+                        @foreach (var item in Items)
+                        {
+                            <li @onclick="() => Select(item)" 
+                                class="px-3 py-2 cursor-pointer hover:bg-hz-spartan text-hz-arendelle font-hz-text transition-colors flex items-center">
+                                @if (ItemTemplate != null)
+                                {
+                                    @ItemTemplate(item)
+                                }
+                                else
+                                {
+                                    @item?.ToString()
+                                }
+                            </li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <div class="p-4 text-center text-hz-gray opacity-70">
+                        No items found
+                    </div>
+                }
+            }
+        </div>
+        
+        <!-- Overlay invisible para cerrar al hacer clic fuera -->
+        <div class="fixed inset-0 z-40" @onclick="Close"></div>
+    }
+</div>
+
+@code {
+    /// <summary>
+    /// Selected item. Use @bind-Value to bind.
+    /// </summary>
+    [Parameter]
+    public TItem? Value { get; set; }
+
+    /// <summary>
+    /// Event for item change. Managed by @bind-Value.
+    /// </summary>
+    [Parameter]
+    public EventCallback<TItem?> ValueChanged { get; set; }
+
+    /// <summary>
+    /// The list of items to display in the Combobox.
+    /// </summary>
+    [Parameter]
+    public IEnumerable<TItem>? Items { get; set; }
+
+    /// <summary>
+    /// Text shown when no item is selected.
+    /// </summary>
+    [Parameter]
+    public string Placeholder { get; set; } = "Seleccionar...";
+    
+    /// <summary>
+    /// Color of the combobox "button". Light blue by default.
+    /// </summary>
+    [Parameter]
+    public string Color { get; set; } = "hz-apollo";
+
+    /// <summary>
+    /// Optional render content to change the look of Combobox items.
+    /// </summary>
+    [Parameter] 
+    public RenderFragment<TItem>? ItemTemplate { get; set; }
+
+    /// <summary>
+    /// Optional render content to replace the dropdown.
+    /// Whatever is inside should call Select(TItem item) to select an item.
+    /// </summary>
+    [Parameter] 
+    public RenderFragment<IEnumerable<TItem>?>? DropdownTemplate { get; set; }
+
+    private bool IsOpen { get; set; }
+
+    private void Toggle()
+    {
+        IsOpen = !IsOpen;
+    }
+
+    private void Close()
+    {
+        IsOpen = false;
+    }
+
+    private async Task Select(TItem item)
+    {
+        Value = item;
+        await ValueChanged.InvokeAsync(Value);
+        Close();
+    }
+}

@@ -1,0 +1,66 @@
+﻿
+<div>
+
+    @* Navegación de año (opcional) *@
+    @if (ShowNavigation)
+    {
+        <div class="flex items-center justify-center gap-4 mb-4">
+            <HorizonMiniButton Color="hz-sol" Icon="fa-chevron-left" OnClick="PreviousYear" />
+            <span class="text-hz-arendelle font-hz-header text-2xl select-none">@Year</span>
+            <HorizonMiniButton Color="hz-sol" Icon="fa-chevron-right" OnClick="NextYear" />
+        </div>
+    }
+
+    @* Cuadrícula 3×4 con los 12 meses *@
+    <div class="grid grid-cols-3 gap-4">
+        @for (var m = 1; m <= 12; m++)
+        {
+            var month = m;
+            <HorizonCalendarMonth Year="@Year"
+                                  Month="@month"
+                                  HighlightToday="@HighlightToday"
+                                  Entries="@GetMonthEntries(month)" />
+        }
+    </div>
+
+</div>
+
+@code {
+    /// <summary>Año a mostrar.</summary>
+    [Parameter] public int Year { get; set; } = DateTime.Today.Year;
+
+    /// <summary>Binding bidireccional para el año.</summary>
+    [Parameter] public EventCallback<int> YearChanged { get; set; }
+
+    /// <summary>Si true, muestra botones de navegación ← año →.</summary>
+    [Parameter] public bool ShowNavigation { get; set; } = true;
+
+    /// <summary>Si true, resalta el día de hoy con un anillo.</summary>
+    [Parameter] public bool HighlightToday { get; set; } = true;
+
+    /// <summary>Todas las entradas del calendario para el año.</summary>
+    [Parameter] public IEnumerable<HorizonCalendarEntry> Entries { get; set; } = [];
+
+    private ILookup<int, HorizonCalendarEntry> _monthLookup =
+        Enumerable.Empty<HorizonCalendarEntry>().ToLookup(e => e.Month);
+
+    protected override void OnParametersSet()
+    {
+        _monthLookup = Entries.ToLookup(e => e.Month);
+    }
+
+    private IEnumerable<HorizonCalendarEntry> GetMonthEntries(int month) => _monthLookup[month];
+
+    private async Task PreviousYear()
+    {
+        Year--;
+        await YearChanged.InvokeAsync(Year);
+    }
+
+    private async Task NextYear()
+    {
+        Year++;
+        await YearChanged.InvokeAsync(Year);
+    }
+}
+

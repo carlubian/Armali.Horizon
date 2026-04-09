@@ -1,0 +1,25 @@
+﻿@using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
+
+<InputNumber @bind-Value="Amount" @oninput="@OnAmountChanged"
+       class="rounded-xl bg-hz-styx text-hz-arendelle placeholder:text-hz-gray font-hz-text shadow-xl h-10 px-2"
+       step="0.01"/>
+
+@code {
+    [Parameter]
+    public double Amount { get; set; } = 0;
+    
+    [Parameter]
+    public EventCallback<double> AmountChanged { get; set; }
+    
+    private Task OnAmountChanged(ChangeEventArgs e)
+    {
+        if (double.TryParse(e.Value?.ToString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var newValue))
+        {
+            Amount = newValue;
+            return AmountChanged.InvokeAsync(Amount);
+        };
+        
+        return Task.CompletedTask;
+    }
+}

@@ -1,0 +1,12 @@
+﻿@typeparam TItem where TItem : Identifiable, Nameable, Colorable
+
+<td class=@($"px-2 text-hz-arendelle font-hz-text justify-items-center items-center text-center")>
+    <span class="flex items-center justify-items-center text-center">
+        <Dot Color="@Content?.Color"/> @Content?.Name
+    </span>
+</td>
+
+@code {
+    [Parameter]
+    public TItem? Content { get; set; }
+}

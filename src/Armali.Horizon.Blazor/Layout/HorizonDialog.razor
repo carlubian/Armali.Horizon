@@ -1,0 +1,25 @@
+﻿<div class="rounded-xl shadow-xl bg-hz-gray grid grid-cols-1">
+    <!-- Header bar with title -->
+    <div class="h-12 w-full bg-hz-spartan text-center flex items-center justify-center rounded-t-xl">
+        <HorizonLabelTitle Text="@Title"/>
+    </div>
+
+    <!-- Main content -->
+    <div class="w-full my-4 p-4">
+        @Content
+    </div>
+    
+    <!-- Button bar -->
+    <div class="h-12 p-4 pb-8 flex flex-row items-center justify-center gap-4">
+        @Controls
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public string Title { get; set; } = "Dialog Title";
+    [Parameter]
+    public required RenderFragment Content { get; set; }
+    [Parameter]
+    public required RenderFragment Controls { get; set; }
+}

@@ -1,0 +1,65 @@
+﻿<div class="relative w-24 h-16 self-center">
+    <!-- Primary mood rectangle -->
+    <div class=@($"bg-[{PrimaryFill}] w-full h-full rounded-lg")></div>
+
+    <!-- Secondary mood band -->
+    <div class=@($"absolute top-8 left-0 w-full h-[30%] bg-[{SecondaryFill}] rounded-none")></div>
+</div>
+
+
+@code {
+    [Parameter]
+    public string ColorPrimary { get; set; }
+    [Parameter]
+    public string ColorSecondary { get; set; }
+
+    private string PrimaryFill
+    {
+        get => ColorPrimary.ToLowerInvariant() switch
+        {
+            "cobalt" => "#445468",
+            "brown" => "#7D4F1D",
+            "purple" => "#573771",
+            "gray" => "#6B6B6B",
+            "viridian" => "#4C7067",
+            "indigo" => "#294583",
+            "violet" => "#964CD4",
+            "white" => "#FFF1ED",
+            "pink" => "#F62EC2",
+            "spring" => "#91AF2F",
+            "yellow" => "#F6EC26",
+            "red" => "#BA1010",
+            "orange" => "#CE6D02",
+            "azure" => "#0070CC",
+            "teal" => "#17BF9F",
+            "green" => "#1D9A00",
+            "sky" => "#58A5DA",
+            _ => "#38434E"
+        };
+    }
+
+    private string SecondaryFill
+    {
+        get => ColorSecondary.ToLowerInvariant() switch
+        {
+            "cobalt" => "#445468",
+            "brown" => "#7D4F1D",
+            "purple" => "#573771",
+            "gray" => "#6B6B6B",
+            "viridian" => "#4C7067",
+            "indigo" => "#294583",
+            "violet" => "#964CD4",
+            "white" => "#FFF1ED",
+            "pink" => "#F62EC2",
+            "spring" => "#91AF2F",
+            "yellow" => "#F6EC26",
+            "red" => "#BA1010",
+            "orange" => "#CE6D02",
+            "azure" => "#0070CC",
+            "teal" => "#17BF9F",
+            "green" => "#1D9A00",
+            "sky" => "#58A5DA",
+            _ => "#38434E"
+        };
+    }
+}

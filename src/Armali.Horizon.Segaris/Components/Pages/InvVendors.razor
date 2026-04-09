@@ -1,0 +1,199 @@
+﻿@page "/inv/vendors"
+
+@using Armali.Horizon.Segaris.Services
+
+@inject InventoryService InventoryService
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="Refresh" />
+<HorizonLayout AppName="Segaris" PageName="Vendors">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Vendor" OnClick="@(() => PopupCreate())" />
+    </Sidebar>
+    <SidebarBottom>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-briefcase" Caption="Vendors" OnClick="@InventoryVendors" />
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-boxes-stacked" Caption="Items" OnClick="@InventoryItems" />
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-truck-fast" Caption="Orders" OnClick="@InventoryOrders" />
+    </SidebarBottom>
+    <Body>
+    
+    <HorizonTable Items="@Entities">
+        <Header>
+            <HorizonCellHeader TItem="InvVendorEntity" Name="Name" />
+            <HorizonCellHeader TItem="InvVendorEntity" Name="Info" />
+            <HorizonCellHeader TItem="InvVendorEntity" Filterable="true" 
+                               ValueSelector="@(e => Index(Statuses, e.StatusId)?.Name ?? string.Empty)" Name="Status" />
+            <HorizonCellHeader TItem="InvVendorEntity" Name="Actions" />
+        </Header>
+        <RowTemplate>
+            <HorizonCellText Content="@context.Name" Center="false" 
+                             Icon="@PrivacyIcon(context.IsPrivate, context.Creator, CurrentUser)" IconColor="@PrivacyColor(context.IsPrivate, context.Creator, CurrentUser)" />
+            <HorizonCellTwoLine Title="@($"{EntityStats[context.Id].OrderCount} orders")"
+                                Subtitle="@($"{EntityStats[context.Id].TotalAmount} €")"/>
+            <HorizonCellStatus Content="@Index(Statuses, context.StatusId)" />
+            <HorizonCellButtons>
+                <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupEdit(context))"/>
+                <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupDelete(context))"/>
+            </HorizonCellButtons>
+        </RowTemplate>
+    </HorizonTable>
+    
+    </Body>
+</HorizonLayout>
+
+@if (ShowEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowEditPopup" OnCanceled="Refresh">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New Vendor" : "Edit Vendor")">
+            <Content>
+                <HorizonForm Model="TargetEntity" Columns="2">
+                    <HorizonFormCell Label="Name">
+                        <HorizonInputText @bind-Text="@TargetEntity!.Name"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Status">
+                        <HorizonCombobox Items="Statuses.Select(s => s.Id)" @bind-Value="@TargetEntity!.StatusId">
+                            <ItemTemplate Context="index">
+                                @Index(Statuses, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <div class="mt-6">
+                        <HorizonCheckbox Text="Is private" @bind-Value="@TargetEntity!.IsPrivate" />
+                    </div>
+                </HorizonForm>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => DoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this entity?" />
+                <HorizonLabelText Text="@TargetEntity!.Name" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => DoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@code {
+    
+    private bool ShowEditPopup;
+    private bool ShowDeletePopup;
+    private PopupIntent Intent = PopupIntent.None;
+    private string CurrentUser = string.Empty;
+
+    // INVENTORY module entities
+    private IEnumerable<InvVendorStatus> Statuses = [];
+    private IEnumerable<InvVendorEntity> Entities = [];
+    private InvVendorEntity? TargetEntity;
+    private IDictionary<int, InvVendorStats> EntityStats = new Dictionary<int, InvVendorStats>();
+    
+    private void InventoryVendors()
+    {
+        Nav.NavigateTo("/inv/vendors");
+    }
+    
+    private void InventoryItems()
+    {
+        Nav.NavigateTo("/inv/items");
+    }
+    
+    private void InventoryOrders()
+    {
+        Nav.NavigateTo("/inv/orders");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Queries for the Inventory module
+        Statuses = await InventoryService.GetInvVendorStatuses();
+    }
+
+    private async Task Refresh()
+    {
+        // Refresh list
+        Entities = await InventoryService.GetInvVendorEntities(CurrentUser);
+        
+        foreach (var Entity in Entities)
+        {
+            EntityStats[Entity.Id] = await GetStats(Entity.Id);
+        }
+    }
+
+    private void PopupCreate()
+    {
+        // Create initial state of target entity for the form
+        TargetEntity = new InvVendorEntity()
+        {
+            Creator = CurrentUser
+        };
+        
+        Intent = PopupIntent.Create;
+        ShowEditPopup = true;
+    }
+
+    private void PopupEdit(InvVendorEntity entity)
+    {
+        TargetEntity = entity;
+        Intent = PopupIntent.Edit;
+        ShowEditPopup = true;
+    }
+    
+    private void PopupDelete(InvVendorEntity entity)
+    {
+        TargetEntity = entity;
+        ShowDeletePopup = true;
+    }
+    
+    private async Task DoCreate()
+    {
+        // Call service to create entity
+        if (Intent is PopupIntent.Create)
+            await InventoryService.AddInvVendor(TargetEntity!);
+        else
+            await InventoryService.UpdateInvVendor(TargetEntity!);
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoDelete()
+    {
+        await InventoryService.DeleteInvVendor(TargetEntity!.Id);
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+
+    private async Task DoNotCreate()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoNotDelete()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+    
+    private async Task<InvVendorStats> GetStats(int entityId)
+    {
+        if (entityId == 0)
+            return new InvVendorStats();
+        return await InventoryService.GetInvVendorStats(entityId);
+    }
+}

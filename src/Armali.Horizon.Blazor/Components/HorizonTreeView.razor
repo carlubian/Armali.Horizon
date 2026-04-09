@@ -1,0 +1,19 @@
+﻿@typeparam TItem
+
+<div class="w-full h-full overflow-y-auto">
+    <ul class="text-hz-arendelle font-hz-text">
+        @if (Items != null)
+        {
+            @ChildContent
+        }
+    </ul>
+</div>
+
+@code {
+    [Parameter]
+    public IEnumerable<TItem>? Items { get; set; }
+    
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}
+

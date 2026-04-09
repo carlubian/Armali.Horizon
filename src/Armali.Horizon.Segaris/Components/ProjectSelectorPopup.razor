@@ -1,0 +1,75 @@
+﻿@using Armali.Horizon.Segaris.Services
+
+@inject ProjectService ProjectService
+
+@if (Visible)
+{
+    <HorizonPopup @bind-Visible="Visible">
+        <HorizonDialog Title="Select Project">
+            <Content>
+                <HorizonTable Items="@Projects" PageSize="8">
+                    <Header>
+                        <HorizonCellHeader TItem="ProjectEntity" Name="Code" />
+                        <HorizonCellHeader TItem="ProjectEntity" Name="Name" />
+                        <HorizonCellHeader TItem="ProjectEntity" Name="" />
+                    </Header>
+                    <RowTemplate>
+                        <HorizonCellText Content="@context.Code" />
+                        <HorizonCellText Content="@context.Name" Center="false" />
+                        <HorizonCellButtons>
+                            <HorizonMiniButton Color="hz-opera" Icon="fa-check" OnClick="@(() => Select(context))" />
+                        </HorizonCellButtons>
+                    </RowTemplate>
+                </HorizonTable>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => Close())" />
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@code {
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    /// <summary>
+    /// Usuario actual para filtrar proyectos por privacidad.
+    /// </summary>
+    [Parameter]
+    public string CurrentUser { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Devuelve el Id del proyecto seleccionado.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnSelected { get; set; }
+
+    private IEnumerable<ProjectEntity> Projects = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Visible && !Projects.Any())
+        {
+            Projects = await ProjectService.GetProjectEntities(CurrentUser);
+        }
+    }
+
+    private async Task Select(ProjectEntity project)
+    {
+        await OnSelected.InvokeAsync(project.Id);
+        await Close();
+    }
+
+    private async Task Close()
+    {
+        Visible = false;
+        Projects = [];
+        await VisibleChanged.InvokeAsync(false);
+    }
+}
+
+

@@ -1,0 +1,227 @@
+﻿@typeparam TItem
+@using System.Linq
+
+<CascadingValue Value="this" IsFixed="false">
+    <div class="w-full rounded-xl shadow-xl overflow-hidden">
+        <table class="w-full">
+            <thead>
+                <tr class="h-12 bg-hz-spartan text-hz-arendelle">
+                    @Header
+                </tr>
+            </thead>
+            
+            <tbody>
+                @foreach (var item in PaginatedItems)
+                {
+                    <tr class="h-10 bg-hz-styx hover:bg-hz-gray text-hz-arendelle font-hz-text">
+                        @RowTemplate(item)
+                    </tr>
+                }
+            </tbody>
+        </table>
+
+        <div class="h-12 bg-hz-spartan flex flex-row items-center justify-center gap-4">
+            <HorizonMiniButton Color="hz-sol" Icon="fa-chevron-left" OnClick="PreviousPage" />
+            <HorizonLabelText Text="@($"Page {_currentPage} of {TotalPages} ({FilteredItems.Count()} items)")" />
+            <HorizonMiniButton Color="hz-sol" Icon="fa-chevron-right" OnClick="NextPage" />
+        </div>
+    </div>
+</CascadingValue>
+
+@if (_showFilterPopup)
+{
+    <HorizonPopup @bind-Visible="_showFilterPopup">
+    <div class="bg-hz-spartan rounded-xl shadow-2xl p-6 max-w-md w-96 max-h-[600px] flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-xl font-hz-header text-hz-arendelle">Filter: @_currentFilterColumnName</h3>
+            <button type="button" 
+                    class="h-8 w-8 bg-hz-tribunal rounded-lg flex items-center justify-center cursor-pointer hover:opacity-80"
+                    @onclick="CloseFilterPopup">
+                <i class="fa-solid fa-xmark text-hz-arendelle"></i>
+            </button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto space-y-2 mb-4">
+            @if (_currentFilterOptions != null)
+            {
+                @foreach (var option in _currentFilterOptions)
+                {
+                    var isSelected = _currentFilterSelections.Contains(option);
+                    <div class=@($"p-3 rounded-lg cursor-pointer {(isSelected ? "bg-hz-opera" : "bg-hz-styx")} hover:opacity-80")
+                         @onclick="() => ToggleFilterOption(option)">
+                        <div class="flex items-center justify-between">
+                            <span class="text-hz-arendelle font-hz-text">@option</span>
+                            @if (isSelected)
+                            {
+                                <i class="fa-solid fa-check text-hz-arendelle"></i>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+        
+        <div class="flex gap-2">
+            <button type="button" 
+                    class="flex-1 h-10 bg-hz-tribunal rounded-xl text-hz-arendelle font-hz-text cursor-pointer hover:opacity-80"
+                    @onclick="ClearCurrentFilter">
+                Clear
+            </button>
+            <button type="button" 
+                    class="flex-1 h-10 bg-hz-opera rounded-xl text-hz-arendelle font-hz-text cursor-pointer hover:opacity-80"
+                    @onclick="ApplyFilter">
+                Apply
+            </button>
+        </div>
+    </div>
+</HorizonPopup>
+}
+
+@code {
+    [Parameter]
+    public required RenderFragment Header { get; set; }
+
+    [Parameter] public IEnumerable<TItem> Items { get; set; } = [];
+    [Parameter] 
+    public required RenderFragment<TItem> RowTemplate { get; set; }
+
+    [Parameter]
+    public int PageSize { get; set; } = 10;
+    
+    private int ActualPageSize => PageSize > 0 ? PageSize : 10;
+
+    private int _currentPage = 1;
+    
+    // Filter management
+    private readonly Dictionary<string, HashSet<string>> _activeFilters = new();
+    private readonly Dictionary<string, Func<TItem, string>> _columnValueSelectors = new();
+    
+    private bool _showFilterPopup;
+    private string _currentFilterColumnName = string.Empty;
+    private List<string> _currentFilterOptions = new();
+    private HashSet<string> _currentFilterSelections = new();
+
+    private IEnumerable<TItem> FilteredItems
+    {
+        get
+        {
+            if (_activeFilters.Count == 0 || _activeFilters.All(f => f.Value.Count == 0))
+                return Items;
+
+            return Items.Where(item =>
+            {
+                foreach (var (columnName, selectedValues) in _activeFilters)
+                {
+                    if (selectedValues.Count == 0)
+                        continue;
+
+                    if (!_columnValueSelectors.TryGetValue(columnName, out var selector))
+                        continue;
+
+                    var itemValue = selector(item);
+                    if (!selectedValues.Contains(itemValue))
+                        return false;
+                }
+                return true;
+            });
+        }
+    }
+
+    private int TotalPages
+    {
+        get
+        {
+            var count = FilteredItems.Count();
+            return count == 0 ? 1 : (int)Math.Ceiling((double)count / ActualPageSize);
+        }
+    }
+
+    private IEnumerable<TItem> PaginatedItems => FilteredItems.Skip((_currentPage - 1) * ActualPageSize).Take(ActualPageSize);
+
+    private void PreviousPage()
+    {
+        if (_currentPage > 1)
+        {
+            _currentPage--;
+        }
+    }
+
+    private void NextPage()
+    {
+        if (_currentPage < TotalPages)
+        {
+            _currentPage++;
+        }
+    }
+    
+    // Public methods for HorizonCellHeader to call
+    public void RegisterFilterableColumn(string columnName, Func<TItem, string> valueSelector)
+    {
+        _columnValueSelectors[columnName] = valueSelector;
+    }
+    
+    public void OpenFilterPopup(string columnName)
+    {
+        if (!_columnValueSelectors.ContainsKey(columnName))
+            return;
+
+        _currentFilterColumnName = columnName;
+        var selector = _columnValueSelectors[columnName];
+        
+        // Get all unique values for this column across all items
+        _currentFilterOptions = Items
+            .Select(selector)
+            .Where(v => !string.IsNullOrEmpty(v))
+            .Distinct()
+            .OrderBy(v => v)
+            .ToList();
+        
+        // Load current selections
+        _currentFilterSelections = _activeFilters.TryGetValue(columnName, out var existing) 
+            ? new HashSet<string>(existing) 
+            : new HashSet<string>();
+        
+        _showFilterPopup = true;
+        StateHasChanged();
+    }
+    
+    public bool HasActiveFilter(string columnName)
+    {
+        return _activeFilters.TryGetValue(columnName, out var filter) && filter.Count > 0;
+    }
+    
+    private void ToggleFilterOption(string option)
+    {
+        if (_currentFilterSelections.Contains(option))
+            _currentFilterSelections.Remove(option);
+        else
+            _currentFilterSelections.Add(option);
+    }
+    
+    private void ClearCurrentFilter()
+    {
+        _currentFilterSelections.Clear();
+    }
+    
+    private void ApplyFilter()
+    {
+        if (_currentFilterSelections.Count == 0)
+        {
+            _activeFilters.Remove(_currentFilterColumnName);
+        }
+        else
+        {
+            _activeFilters[_currentFilterColumnName] = new HashSet<string>(_currentFilterSelections);
+        }
+        
+        // Reset to first page when filters change
+        _currentPage = 1;
+        
+        _showFilterPopup = false;
+    }
+    
+    private void CloseFilterPopup()
+    {
+        _showFilterPopup = false;
+    }
+}

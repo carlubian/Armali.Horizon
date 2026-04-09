@@ -1,0 +1,25 @@
+﻿@using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
+
+<InputDate @bind-Value="Date" @oninput="@OnAmountChanged"
+             class="rounded-xl bg-hz-styx text-hz-arendelle placeholder:text-hz-gray font-hz-text shadow-xl h-10 px-2 w-full "/>
+
+@code {
+    [Parameter]
+    public DateTime Date { get; set; } = DateTime.Today;
+    
+    [Parameter]
+    public EventCallback<DateTime> DateChanged { get; set; }
+    
+    private Task OnAmountChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), CultureInfo.InvariantCulture, 
+                DateTimeStyles.AllowWhiteSpaces | DateTimeStyles.AssumeLocal, out var newDate))
+        {
+            Date = newDate;
+            return DateChanged.InvokeAsync(Date);
+        };
+        
+        return Task.CompletedTask;
+    }
+}

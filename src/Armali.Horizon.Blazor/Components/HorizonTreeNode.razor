@@ -1,0 +1,147 @@
+﻿@* HorizonTreeNode - A collapsible tree node component *@
+
+<li class="select-none">
+    <div class="flex items-center gap-2 py-1 px-2 rounded-lg transition-colors @GetNodeClasses()"
+         @onclick="HandleClick"
+         @onclick:stopPropagation="true">
+        
+        @* Expand/Collapse icon for parent nodes *@
+        @if (HasChildren)
+        {
+            <span class="w-5 h-5 flex items-center justify-center cursor-pointer hover:text-hz-meridian transition-colors"
+                  @onclick="ToggleExpand"
+                  @onclick:stopPropagation="true">
+                @if (IsExpanded)
+                {
+                    <i class="fa-solid fa-chevron-down text-sm"></i>
+                }
+                else
+                {
+                    <i class="fa-solid fa-chevron-right text-sm"></i>
+                }
+            </span>
+        }
+        else
+        {
+            <span class="w-5 h-5"></span>
+        }
+        
+        @* Node icon *@
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <i class="@($"fa-solid {Icon} text-sm {GetIconColorClass()}")"></i>
+        }
+        
+        @* Node text *@
+        <span class="truncate @GetTextClasses()">
+            @Text
+        </span>
+    </div>
+    
+    @* Children container *@
+    @if (HasChildren && IsExpanded)
+    {
+        <ul class="ml-4 border-l border-hz-gray-light pl-2">
+            @ChildContent
+        </ul>
+    }
+</li>
+
+@code {
+    [Parameter]
+    public string Text { get; set; } = string.Empty;
+    
+    [Parameter]
+    public string Icon { get; set; } = string.Empty;
+    
+    [Parameter]
+    public string IconColor { get; set; } = "text-hz-arendelle";
+    
+    [Parameter]
+    public bool HasChildren { get; set; }
+    
+    [Parameter]
+    public bool IsExpanded { get; set; }
+    
+    [Parameter]
+    public EventCallback<bool> IsExpandedChanged { get; set; }
+    
+    [Parameter]
+    public bool IsSelectable { get; set; }
+    
+    [Parameter]
+    public bool IsSelected { get; set; }
+    
+    [Parameter]
+    public EventCallback<bool> IsSelectedChanged { get; set; }
+    
+    [Parameter]
+    public EventCallback OnSelected { get; set; }
+    
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+    
+    [Parameter]
+    public int Level { get; set; } = 0;
+
+    private async Task ToggleExpand()
+    {
+        if (HasChildren)
+        {
+            IsExpanded = !IsExpanded;
+            await IsExpandedChanged.InvokeAsync(IsExpanded);
+        }
+    }
+    
+    private async Task HandleClick()
+    {
+        if (IsSelectable)
+        {
+            await OnSelected.InvokeAsync();
+        }
+        else if (HasChildren)
+        {
+            await ToggleExpand();
+        }
+    }
+    
+    private string GetNodeClasses()
+    {
+        var classes = new List<string>();
+        
+        if (IsSelectable)
+        {
+            classes.Add("cursor-pointer hover:bg-hz-spartan");
+            
+            if (IsSelected)
+            {
+                classes.Add("bg-hz-apollo text-hz-arendelle");
+            }
+        }
+        else if (HasChildren)
+        {
+            classes.Add("cursor-pointer hover:bg-hz-styx");
+        }
+        
+        return string.Join(" ", classes);
+    }
+    
+    private string GetTextClasses()
+    {
+        if (IsSelected)
+        {
+            return "font-bold";
+        }
+        return "";
+    }
+    
+    private string GetIconColorClass()
+    {
+        if (IsSelected)
+        {
+            return "text-hz-arendelle";
+        }
+        return IconColor;
+    }
+}
+

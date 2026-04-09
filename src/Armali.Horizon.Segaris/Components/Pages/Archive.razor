@@ -1,0 +1,232 @@
+﻿@page "/archive"
+
+@using Armali.Horizon.Segaris.Services
+@using Microsoft.AspNetCore.Components.Forms
+
+@inject ArchiveService ArchiveService
+@inject IJSRuntime JS
+
+<HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="LoadData" />
+<HorizonLayout AppName="Segaris" PageName="Archive">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Archive" OnClick="@(() => PopupCreate())" />
+    </Sidebar>
+    <SidebarBottom>
+        
+    </SidebarBottom>
+    <Body>
+    
+    <HorizonTable Items="@Entities">
+        <Header>
+            <HorizonCellHeader TItem="ArchiveEntity" Name="Name" />
+            <HorizonCellHeader TItem="ArchiveEntity" Name="Date" />
+            <HorizonCellHeader TItem="ArchiveEntity" Name="File" />
+            <HorizonCellHeader TItem="ArchiveEntity" Filterable="true" 
+                               ValueSelector="@(e => Index(Categories, e.CategoryId)?.Name ?? string.Empty)" Name="Category" />
+            <HorizonCellHeader TItem="ArchiveEntity" Filterable="true" 
+                               ValueSelector="@(e => Index(Statuses, e.StatusId)?.Name ?? string.Empty)" Name="Status" />
+            <HorizonCellHeader TItem="ArchiveEntity" Name="Actions" />
+        </Header>
+        <RowTemplate>
+            <HorizonCellText Content="@context.Name" Center="false" 
+                             IsPrivate="@context.IsPrivate" Creator="@context.Creator" CurrentUser="@CurrentUser" />
+            <HorizonCellDateTime Content="@context.Date" />
+            <HorizonCellText Content="@context.File" />
+            <HorizonCellText Content="@Index(Categories, context.CategoryId)?.Name" />
+            <HorizonCellStatus Content="@Index(Statuses, context.StatusId)" />
+            <HorizonCellButtons>
+                @if (!string.IsNullOrEmpty(context.File))
+                {
+                    <HorizonMiniButton Color="hz-tefiti" Icon="fa-download" OnClick="@(() => DownloadFile(context))"/>
+                }
+                <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupEdit(context))"/>
+                <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupDelete(context))"/>
+            </HorizonCellButtons>
+        </RowTemplate>
+    </HorizonTable>
+    
+    </Body>
+</HorizonLayout>
+
+@if (ShowEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowEditPopup" OnCanceled="Refresh">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New Archive" : "Edit Archive")">
+            <Content>
+                <HorizonForm Model="TargetEntity" Columns="2">
+                    <HorizonFormCell Label="Name">
+                        <HorizonInputText @bind-Text="@TargetEntity!.Name"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Category">
+                        <HorizonCombobox Items="Categories.Select(c => c.Id)" @bind-Value="@TargetEntity!.CategoryId">
+                            <ItemTemplate Context="index">
+                                @Index(Categories, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Status">
+                        <HorizonCombobox Items="Statuses.Select(s => s.Id)" @bind-Value="@TargetEntity!.StatusId">
+                            <ItemTemplate Context="index">
+                                @Index(Statuses, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="File">
+                        <HorizonInputFile @bind-File="SelectedFile" 
+                                          FileName="@(!string.IsNullOrEmpty(TargetEntity!.File) ? TargetEntity.File : string.Empty)"
+                                          Placeholder="Select a file..." />
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Date">
+                        <HorizonInputDate @bind-Date="@TargetEntity!.Date"/>
+                    </HorizonFormCell>
+                    
+                    <div class="mt-6">
+                        <HorizonCheckbox Text="Is private" @bind-Value="@TargetEntity!.IsPrivate" />
+                    </div>
+                </HorizonForm>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => DoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this entity?" />
+                <HorizonLabelText Text="@TargetEntity!.Name" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => DoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@code {
+    
+    private bool ShowEditPopup;
+    private bool ShowDeletePopup;
+    private PopupIntent Intent = PopupIntent.None;
+    private string CurrentUser = string.Empty;
+
+    // ARCHIVE module entities
+    private IEnumerable<ArchiveCategory> Categories = [];
+    private IEnumerable<ArchiveStatus> Statuses = [];
+    private IEnumerable<ArchiveEntity> Entities = [];
+    private ArchiveEntity? TargetEntity;
+    private IBrowserFile? SelectedFile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Queries for the Archive module
+        Categories = await ArchiveService.GetArchiveCategories();
+        Statuses = await ArchiveService.GetArchiveStatuses();
+    }
+
+    private async Task LoadData()
+    {
+        await Refresh();
+    }
+
+    private async Task Refresh()
+    {
+        // Refresh list
+        Entities = await ArchiveService.GetArchiveEntities(CurrentUser);
+    }
+
+    private void PopupCreate()
+    {
+        // Create initial state of target entity for the form
+        TargetEntity = new ArchiveEntity()
+        {
+            Date = DateTime.Today,
+            Creator = CurrentUser
+        };
+        
+        Intent = PopupIntent.Create;
+        ShowEditPopup = true;
+    }
+
+    private void PopupEdit(ArchiveEntity entity)
+    {
+        TargetEntity = entity;
+        Intent = PopupIntent.Edit;
+        ShowEditPopup = true;
+    }
+    
+    private void PopupDelete(ArchiveEntity entity)
+    {
+        TargetEntity = entity;
+        ShowDeletePopup = true;
+    }
+    
+    private async Task DoCreate()
+    {
+        // Handle file upload if a file was selected
+        if (SelectedFile != null)
+        {
+            await using var Stream = SelectedFile.OpenReadStream(SelectedFile.Size);
+            var NewFileName = await ArchiveService.UploadFileAsync(
+                Stream, 
+                SelectedFile.Name, 
+                string.IsNullOrEmpty(TargetEntity!.File) ? null : TargetEntity.File);
+            TargetEntity!.File = NewFileName;
+        }
+        
+        // Call service to create or update entity
+        if (Intent is PopupIntent.Create)
+            await ArchiveService.AddArchive(TargetEntity!);
+        else
+            await ArchiveService.UpdateArchive(TargetEntity!);
+        
+        SelectedFile = null;
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DownloadFile(ArchiveEntity entity)
+    {
+        if (string.IsNullOrEmpty(entity.File)) return;
+        
+        var FileStream = await ArchiveService.DownloadFileAsync(entity.File);
+        using var MemoryStream = new MemoryStream();
+        await FileStream.CopyToAsync(MemoryStream);
+        var FileBytes = MemoryStream.ToArray();
+        var Base64 = Convert.ToBase64String(FileBytes);
+        
+        await JS.InvokeVoidAsync("downloadFile", entity.File, Base64);
+    }
+    
+    private async Task DoDelete()
+    {
+        await ArchiveService.DeleteArchive(TargetEntity!.Id);
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+
+    private async Task DoNotCreate()
+    {
+        TargetEntity = null;
+        SelectedFile = null;
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoNotDelete()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+}

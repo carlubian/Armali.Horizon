@@ -1,0 +1,46 @@
+﻿@page "/"
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-User="CurrentUser" />
+<HorizonLayout AppName="Autoconfig" PageName="@PageTitle">
+    <Sidebar>
+        
+    </Sidebar>
+    <SidebarBottom>
+        
+    </SidebarBottom>
+    <Body>
+        <div class="grid grid-cols-4 h-[78vh] items-center justify-center content-center">
+            <div />
+            <HorizonCard Title="Nodes" Image="/images/server.png" OnClick="@Nodes"/>
+            <HorizonCard Title="Apps" Image="/images/web-load.png" OnClick="@Apps"/>
+        </div>
+    </Body>
+</HorizonLayout>
+
+@code
+{
+    private string CurrentUser { get; set; } = "Unknown";
+    private const string Version = "1.0.0";
+    
+    private string PageTitle
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(CurrentUser) || CurrentUser.Equals("Unknown"))
+                return $"v{Version}";
+            else
+                return $"v{Version} - {CurrentUser}";
+        }
+    }
+    
+    private void Nodes()
+    {
+        Nav.NavigateTo("/nodes");
+    }
+    
+    private void Apps()
+    {
+        Nav.NavigateTo("/apps");
+    }
+}

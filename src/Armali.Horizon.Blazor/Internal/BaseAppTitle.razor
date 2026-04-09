@@ -1,0 +1,11 @@
+﻿<div class="flex justify-self-center text-center items-center justify-items-center gap-2">
+    <img src="_content/Armali.Horizon.Blazor/armali-dark-notext.png" alt="Armali Logo" width="128px" />
+    <h1 class="font-hz-header text-3xl text-hz-arendelle justify-self-center text-center">
+        @AppName
+    </h1>
+</div>
+
+@code {
+    [Parameter]
+    public string AppName { get; set; } = "Horizon App";
+}

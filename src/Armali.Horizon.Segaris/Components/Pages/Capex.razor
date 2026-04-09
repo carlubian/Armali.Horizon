@@ -1,0 +1,220 @@
+﻿@page "/capex"
+
+@using Armali.Horizon.Segaris.Services
+
+@inject CapexService CapexService
+@inject ProjectService ProjectService
+
+<HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="LoadData" />
+<HorizonLayout AppName="Segaris" PageName="Capex">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Expense" OnClick="@(() => PopupCreate())" />
+    </Sidebar>
+    <SidebarBottom>
+        
+    </SidebarBottom>
+    <Body>
+    
+    <HorizonTable Items="@Entities">
+        <Header>
+            <HorizonCellHeader TItem="CapexEntity" Name="Name" />
+            <HorizonCellHeader TItem="CapexEntity" Name="Date" />
+            <HorizonCellHeader TItem="CapexEntity" Name="Amount" />
+            <HorizonCellHeader TItem="CapexEntity" Filterable="true" 
+                               ValueSelector="@(e => Index(Categories, e.CategoryId)?.Name ?? string.Empty)" Name="Category" />
+            <HorizonCellHeader TItem="CapexEntity" Filterable="true" 
+                               ValueSelector="@(e => Index(Statuses, e.StatusId)?.Name ?? string.Empty)" Name="Status" />
+            <HorizonCellHeader TItem="CapexEntity" Name="Actions" />
+        </Header>
+        <RowTemplate>
+            <HorizonCellTwoLine Title="@context.Name"
+                                Subtitle="@(context.ProjectId is not null ? (Projects.FirstOrDefault(p => p.Id == context.ProjectId.Value)?.Name ?? "Deleted") : "—")"
+                                Center="false"
+                                Icon="@PrivacyIcon(context.IsPrivate, context.Creator, CurrentUser)" IconColor="@PrivacyColor(context.IsPrivate, context.Creator, CurrentUser)" />
+            <HorizonCellDateTime Content="@context.Date" />
+            <HorizonCellCurrency Content="@context.Amount" />
+            <HorizonCellText Content="@Index(Categories, context.CategoryId)?.Name" />
+            <HorizonCellStatus Content="@Index(Statuses, context.StatusId)" />
+            <HorizonCellButtons>
+                <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupEdit(context))"/>
+                <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupDelete(context))"/>
+            </HorizonCellButtons>
+        </RowTemplate>
+    </HorizonTable>
+    
+    </Body>
+</HorizonLayout>
+
+@if (ShowEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowEditPopup" OnCanceled="Refresh">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New CAPEX" : "Edit CAPEX")">
+            <Content>
+                <HorizonForm Model="TargetEntity" Columns="2">
+                    <HorizonFormCell Label="Name">
+                        <HorizonInputText @bind-Text="@TargetEntity!.Name"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Category">
+                        <HorizonCombobox Items="Categories.Select(c => c.Id)" @bind-Value="@TargetEntity!.CategoryId">
+                            <ItemTemplate Context="index">
+                                @Index(Categories, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Status">
+                        <HorizonCombobox Items="Statuses.Select(s => s.Id)" @bind-Value="@TargetEntity!.StatusId">
+                            <ItemTemplate Context="index">
+                                @Index(Statuses, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Amount">
+                        <HorizonInputNumber @bind-Amount="@TargetEntity!.Amount"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Date">
+                        <HorizonInputDate @bind-Date="@TargetEntity!.Date"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Project">
+                        <HorizonEntityLink LinkedName="@(TargetEntity!.ProjectId is not null ? Projects.FirstOrDefault(p => p.Id == TargetEntity.ProjectId.Value)?.Name : null)"
+                                           OnSelectClicked="@(() => ShowProjectSelector = true)"
+                                           OnClearClicked="@(() => TargetEntity!.ProjectId = null)" />
+                    </HorizonFormCell>
+                    
+                    <div class="mt-6">
+                        <HorizonCheckbox Text="Is private" @bind-Value="@TargetEntity!.IsPrivate" />
+                    </div>
+                </HorizonForm>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => DoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this entity?" />
+                <HorizonLabelText Text="@TargetEntity!.Name" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => DoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+<ProjectSelectorPopup @bind-Visible="ShowProjectSelector"
+                      CurrentUser="@CurrentUser"
+                      OnSelected="OnProjectSelected" />
+
+@code {
+    
+    private bool ShowEditPopup;
+    private bool ShowDeletePopup;
+    private bool ShowProjectSelector;
+    private PopupIntent Intent = PopupIntent.None;
+    private string CurrentUser = string.Empty;
+
+    // CAPEX module entities
+    private IEnumerable<CapexCategory> Categories = [];
+    private IEnumerable<CapexStatus> Statuses = [];
+    private IEnumerable<CapexEntity> Entities = [];
+    private CapexEntity? TargetEntity;
+    
+    // Proyectos disponibles para enlace
+    private IEnumerable<ProjectEntity> Projects = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Queries for the Capex module
+        Categories = await CapexService.GetCapexCategories();
+        Statuses = await CapexService.GetCapexStatuses();
+    }
+
+    private async Task LoadData()
+    {
+        Projects = await ProjectService.GetProjectEntities(CurrentUser);
+        await Refresh();
+    }
+
+    private async Task Refresh()
+    {
+        // Refresh list
+        Entities = await CapexService.GetCapexEntities(CurrentUser);
+    }
+
+    private void PopupCreate()
+    {
+        // Create initial state of target entity for the form
+        TargetEntity = new CapexEntity()
+        {
+            Date = DateTime.Today,
+            Creator = CurrentUser
+        };
+        
+        Intent = PopupIntent.Create;
+        ShowEditPopup = true;
+    }
+
+    private void PopupEdit(CapexEntity entity)
+    {
+        TargetEntity = entity;
+        Intent = PopupIntent.Edit;
+        ShowEditPopup = true;
+    }
+    
+    private void PopupDelete(CapexEntity entity)
+    {
+        TargetEntity = entity;
+        ShowDeletePopup = true;
+    }
+    
+    private async Task DoCreate()
+    {
+        // Call service to create entity
+        if (Intent is PopupIntent.Create)
+            await CapexService.AddCapex(TargetEntity!);
+        else
+            await CapexService.UpdateCapex(TargetEntity!);
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoDelete()
+    {
+        await CapexService.DeleteCapex(TargetEntity!.Id);
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+
+    private async Task DoNotCreate()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoNotDelete()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+    
+    private void OnProjectSelected(int projectId)
+    {
+        if (TargetEntity is not null)
+            TargetEntity.ProjectId = projectId;
+    }
+}

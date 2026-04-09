@@ -1,0 +1,274 @@
+﻿@page "/mood"
+
+@using Armali.Horizon.Segaris.Services
+@using Microsoft.JSInterop
+
+@inject MoodService MoodService
+@inject IJSRuntime JS
+
+<HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="LoadData" />
+<HorizonLayout AppName="Segaris" PageName="Mood">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Record" OnClick="@(() => PopupCreate())" />
+        <HorizonHeroButton Color="hz-sol" Icon="fa-chevron-left" Caption="Week Back" OnClick="@(() => PreviousWeek())" />
+        <HorizonHeroButton Color="hz-sol" Icon="fa-chevron-right" Caption="Week Fwd" OnClick="@(() => NextWeek())" />
+    </Sidebar>
+    <SidebarBottom>
+        
+    </SidebarBottom>
+    <Body>
+    
+    <!-- Score chart -->
+    <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+        <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+            Score chart (min / avg / max)
+        </div>
+        <div class="w-full h-60 mt-2">
+            <canvas id="moodChart"></canvas>
+        </div>
+    </div>
+    
+    <!-- Mood entries per day -->
+    <div class="grid grid-cols-7 gap-2">
+        @for (var i = 0; i < 7; i++)
+        {
+            var Date = CurrentWeekStart.AddDays(i);
+            var DayItems = Entities.Where(x => x.Date.Date == Date.Date).ToList();
+            <div class="flex flex-col gap-2 p-2 rounded-xl bg-hz-styx min-h-[200px] shadow-xl">
+                <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                    @Date.ToString("ddd dd")
+                </div>
+                @foreach (var Item in DayItems)
+                {
+                    <div class="flex justify-between items-center p-2">
+                        <MoodBox ColorPrimary=@(Index(Categories, Item.CategoryId)?.PrimaryColor ?? "gray") 
+                                 ColorSecondary=@(Index(Categories, Item.CategoryId)?.SecondaryColor ?? "gray") />
+                        <HorizonLabelTitle Text=@Item.Score.ToString() />
+                        <div class="flex gap-1">
+                            <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupEdit(Item))"/>
+                            <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupDelete(Item))"/>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+    
+    </Body>
+</HorizonLayout>
+
+@if (ShowEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowEditPopup" OnCanceled="Refresh">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New Record" : "Edit Record")">
+            <Content>
+                <HorizonForm Model="TargetEntity" Columns="2">
+                    <HorizonFormCell Label="Category">
+                        <HorizonCombobox Items="Categories.Select(c => c.Id)" @bind-Value="@TargetEntity!.CategoryId">
+                            <ItemTemplate Context="index">
+                                <div class="grid grid-cols-2 gap-2 items-center">
+                                    <MoodBox ColorPrimary="@(Index(Categories, index)?.PrimaryColor ?? string.Empty)" 
+                                             ColorSecondary="@(Index(Categories, index)?.SecondaryColor ?? string.Empty)" />
+                                    @Index(Categories, index)?.Name
+                                </div>
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Score">
+                        <HorizonInputInteger @bind-Amount="@TargetEntity!.Score"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Date">
+                        <HorizonInputDate @bind-Date="@TargetEntity!.Date"/>
+                    </HorizonFormCell>
+                    
+                    <!--<div class="mt-6">
+                        <HorizonCheckbox Text="Is private" @bind-Value="@TargetEntity!.IsPrivate" />
+                    </div>-->
+                </HorizonForm>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => DoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this entity?" />
+                <HorizonLabelText Text="@Index(Categories, TargetEntity!.CategoryId)?.Name" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => DoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@code {
+    
+    private bool ShowEditPopup;
+    private bool ShowDeletePopup;
+    private PopupIntent Intent = PopupIntent.None;
+    private string CurrentUser = string.Empty;
+
+    // MOOD module entities
+    private IEnumerable<MoodCategory> Categories = [];
+    private IEnumerable<MoodEntity> Entities = [];
+    private List<MoodDailyStats> WeekStats = [];
+    private MoodEntity? TargetEntity;
+    private DateTime CurrentWeekStart;
+    
+    private async Task PreviousWeek()
+    {
+        CurrentWeekStart = CurrentWeekStart.AddDays(-7);
+        await Refresh();
+    }
+
+    private async Task NextWeek()
+    {
+        CurrentWeekStart = CurrentWeekStart.AddDays(7);
+        await Refresh();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Queries for the Mood module
+        Categories = await MoodService.GetMoodCategories();
+        
+        // Calculate Monday of current week
+        var Today = DateTime.Today;
+        var Diff = (7 + (Today.DayOfWeek - DayOfWeek.Monday)) % 7;
+        CurrentWeekStart = Today.AddDays(-Diff);
+    }
+
+    private async Task LoadData()
+    {
+        await Refresh();
+    }
+
+    private async Task Refresh()
+    {
+        // Refresh list
+        var End = CurrentWeekStart.AddDays(6);
+        Entities = await MoodService.GetMoodBetweenDates(CurrentWeekStart, End, CurrentUser);
+        await UpdateWeekStats();
+    }
+
+    private void PopupCreate()
+    {
+        // Create initial state of target entity for the form
+        TargetEntity = new MoodEntity()
+        {
+            Date = DateTime.Today,
+            Score = 3,
+            Creator = CurrentUser,
+            IsPrivate = true
+        };
+        
+        Intent = PopupIntent.Create;
+        ShowEditPopup = true;
+    }
+
+    private void PopupEdit(MoodEntity entity)
+    {
+        TargetEntity = entity;
+        Intent = PopupIntent.Edit;
+        ShowEditPopup = true;
+    }
+    
+    private void PopupDelete(MoodEntity entity)
+    {
+        TargetEntity = entity;
+        ShowDeletePopup = true;
+    }
+    
+    private async Task DoCreate()
+    {
+        // Call service to create entity
+        if (Intent is PopupIntent.Create)
+            await MoodService.AddMood(TargetEntity!);
+        else
+            await MoodService.UpdateMood(TargetEntity!);
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoDelete()
+    {
+        await MoodService.DeleteMood(TargetEntity!.Id);
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+
+    private async Task DoNotCreate()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoNotDelete()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+
+    private async Task UpdateWeekStats()
+    {
+        WeekStats = Enumerable.Range(0, 7)
+            .Select(i =>
+            {
+                var Date = CurrentWeekStart.AddDays(i).Date;
+                var DayItems = Entities.Where(x => x.Date.Date == Date).ToList();
+                var Min = DayItems.Count == 0 ? 0 : DayItems.Min(x => x.Score);
+                var Max = DayItems.Count == 0 ? 0 : DayItems.Max(x => x.Score);
+                var Avg = DayItems.Count == 0 ? 0 : DayItems.Average(x => x.Score);
+
+                return new MoodDailyStats
+                {
+                    Date = Date,
+                    Min = ClampScore(Min),
+                    Avg = ClampScore(Avg),
+                    Max = ClampScore(Max)
+                };
+            })
+            .ToList();
+        
+        await RenderChart();
+        StateHasChanged();
+    }
+    
+    private async Task RenderChart()
+    {
+        var labels = WeekStats.Select(x => x.Date.ToString("ddd dd")).ToArray();
+        var minData = WeekStats.Select(x => x.Min).ToArray();
+        var avgData = WeekStats.Select(x => x.Avg).ToArray();
+        var maxData = WeekStats.Select(x => x.Max).ToArray();
+        
+        await JS.InvokeVoidAsync("renderMoodChart", labels, minData, avgData, maxData);
+    }
+
+    private static double ClampScore(double value)
+    {
+        if (value < 0)
+        {
+            return 0;
+        }
+
+        if (value > 5)
+        {
+            return 5;
+        }
+
+        return value;
+    }
+}

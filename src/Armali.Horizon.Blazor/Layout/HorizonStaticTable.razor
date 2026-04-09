@@ -1,0 +1,20 @@
+﻿<div class="w-full rounded-xl overflow-hidden">
+    <table class="w-full">
+        <thead>
+            <tr class="h-12 bg-hz-spartan text-hz-arendelle">
+                @Header
+            </tr>
+        </thead>
+        <tbody>
+            @Body
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter]
+    public RenderFragment Header { get; set; }
+    
+    [Parameter]
+    public RenderFragment Body { get; set; }
+}

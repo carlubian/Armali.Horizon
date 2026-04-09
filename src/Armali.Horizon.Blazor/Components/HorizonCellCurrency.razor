@@ -1,0 +1,72 @@
+﻿@typeparam TItem
+
+<td class=@($"px-2 text-{ColorFromQuantity} font-semibold font-hz-text text-center")>@StringValue &euro;</td>
+
+@code {
+    [Parameter]
+    public TItem? Content { get; set; }
+
+    private string StringValue
+    {
+        get
+        {
+            if (Content is null)
+                return "No content";
+            return Content! switch
+            {
+                int i => i.ToString(),
+                float f => f.ToString("F2"),
+                double d => d.ToString("F2"),
+                decimal m => m.ToString("F2"),
+                _ => "NaN"
+            };
+        }
+    }
+    
+    private string ColorFromQuantity
+    {
+        get
+        {
+            return ContentQuantity switch
+            {
+                Quantity.Negative => "hz-tribunal",
+                Quantity.Zero => "hz-arendelle",
+                Quantity.Positive => "hz-opera",
+                _ => "hz-arendelle"
+            };
+        }
+    }
+    
+    private Quantity ContentQuantity
+    {
+        get
+        {
+            if (Content is null)
+                return Quantity.Zero;
+
+            return (Content! switch
+            {
+                int and < 0 => Quantity.Negative,
+                int and 0 => Quantity.Zero,
+                int and > 0 => Quantity.Positive,
+                float and < 0 => Quantity.Negative,
+                float and 0 => Quantity.Zero,
+                float and > 0 => Quantity.Positive,
+                double and < 0 => Quantity.Negative,
+                double and 0 => Quantity.Zero,
+                double and > 0 => Quantity.Positive,
+                decimal and < 0 => Quantity.Negative,
+                decimal and 0 => Quantity.Zero,
+                decimal and > 0 => Quantity.Positive,
+                _ => Quantity.Zero
+            });
+        }
+    }
+
+    private enum Quantity
+    {
+        Negative,
+        Zero,
+        Positive
+    }
+}

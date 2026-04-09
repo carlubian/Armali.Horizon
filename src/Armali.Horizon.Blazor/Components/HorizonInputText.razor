@@ -1,0 +1,20 @@
+﻿<input type="text"
+       class="rounded-xl bg-hz-styx text-hz-arendelle placeholder:text-hz-gray font-hz-text shadow-xl h-10 px-2"
+       placeholder="@Placeholder"
+       value="@Text"
+       @oninput="@OnTextChanged"/>
+
+@code {
+    [Parameter]
+    public string Placeholder { get; set; } = "Placeholder";
+    [Parameter]
+    public string Text { get; set; } = "";
+    [Parameter]
+    public EventCallback<string> TextChanged { get; set; }
+
+    private Task OnTextChanged(ChangeEventArgs e)
+    {
+        Text = e.Value?.ToString() ?? "";
+        return TextChanged.InvokeAsync(Text);
+    }
+}

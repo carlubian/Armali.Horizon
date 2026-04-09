@@ -1,0 +1,14 @@
+﻿<button class=@($"h-10 w-8 bg-{Color} rounded-xl flex flex-row items-center justify-center overflow-hidden shadow-xl cursor-pointer")
+        type="button"
+        @onclick="OnClick">
+    <i class=@($"inline-block align-middle text-hz-arendelle text-xl fa-solid {Icon}")></i>
+</button>
+
+@code {
+    [Parameter]
+    public string Color { get; set; } = "hz-opera";
+    [Parameter]
+    public string Icon { get; set; } = "fa-question";
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+}

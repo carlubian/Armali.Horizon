@@ -1,0 +1,142 @@
+﻿@using Armali.Horizon.Blazor.Services
+@using Armali.Horizon.Core.Model
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+@rendermode InteractiveServer
+
+@inject NavigationManager Nav
+@inject HorizonSessionService Storage
+
+<HeadContent>
+    <link href="_content/Armali.Horizon.Blazor/tailwind.css" rel="stylesheet" />
+    <link rel="icon" type="image/png" href="_content/Armali.Horizon.Blazor/armali-dark-notext.png" />
+</HeadContent>
+<PageTitle>@PageName</PageTitle>
+
+<!-- Background in Styx Gray -->
+<div class="bg-hz-styx h-screen w-screen flex flex-col gap-4 overflow-hidden text-slate-800 font-sans">
+    
+    <!-- Container for the top section -->
+    <div class="relative w-full isolate">
+    
+        <!-- Bottom layer to fake the curves in the tabs above -->
+        <div class="absolute inset-0 -z-10 flex flex-col">
+            <div class="h-1/2 w-full bg-hz-arendelle"></div>
+            <div class="h-1/2 w-full bg-hz-styx"></div>
+        </div>
+
+        <!-- Top layer with the tabs -->
+        <div class="mt-4 grid grid-cols-3">
+
+            <!-- Armali icon and App Name -->
+            <div class="p-6 bg-hz-styx rounded-tr-xl items-center justify-items-center">
+                <BaseAppTitle AppName=@AppName />
+            </div>
+            <!-- Page name -->
+            <div class="p-6 bg-hz-arendelle rounded-b-xl items-center justify-items-center">
+                <BasePageTitle PageName=@PageName />
+            </div>
+            <!-- Global icon bar -->
+            <div class="p-6 bg-hz-styx rounded-tl-xl items-center justify-items-center">
+                <BaseGlobalButton Icon="fa-house-chimney" OnClick="@NavigateHome"/>
+                <BaseGlobalButton Icon="fa-gear" OnClick="() => { }"/>
+                @if (_isAuthenticated)
+                {
+                    <BaseGlobalButton Icon="fa-user-pen" OnClick="() => { }"/>
+                    <BaseGlobalButton Icon="fa-arrow-right-to-bracket" OnClick="@NavigateLogout"/>
+                }
+                else
+                {
+                    <BaseGlobalButton Icon="fa-door-open" OnClick="@NavigateLogin"/>
+                }
+            </div>
+
+        </div>
+            
+        </div>
+    
+    <!-- Container for the rest of the content -->
+    <div class="flex flex-1 h-full ml-4 mb-4">
+        
+        <!-- Container for the App Content Area -->
+        <main class="flex-1 gap-4 h-full overflow-hidden p-6 rounded-xl bg-hz-gray deep-inner-shadow">
+            @if (Body is not null)
+            {
+                <div class="w-full max-h-[80vh] overflow-y-auto">
+                    @Body
+                </div>
+            }
+        </main>
+        
+        <!-- Container for the side button bar -->
+        <aside class="flex flex-col gap-4 m-4 shrink-0">
+
+            @if (Sidebar is not null)
+            {
+                @Sidebar
+            }
+
+            <div class="flex-1"></div>
+
+            @if (SidebarBottom is not null)
+            {
+                @SidebarBottom
+            }
+
+        </aside>
+
+    </div>
+
+</div>
+
+@code {
+    [Parameter]
+    public string AppName { get; set; } = "Horizon App";
+    
+    [Parameter]
+    public string PageName { get; set; } = "Default page";
+    
+    [Parameter]
+    public RenderFragment? Sidebar { get; set; }
+    
+    [Parameter]
+    public RenderFragment? SidebarBottom { get; set; }
+    
+    [Parameter]
+    public RenderFragment? Body { get; set; }
+    
+    private bool _isAuthenticated = false;
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _isAuthenticated = await IsAuthenticated();
+            StateHasChanged();
+        }
+    }
+    
+    private void NavigateHome()
+    {
+        Nav.NavigateTo("/");
+    }
+
+    private void NavigateLogin()
+    {
+        Nav.NavigateTo("/horizon/login");
+    }
+    
+    private void NavigateLogout()
+    {
+        Nav.NavigateTo("/horizon/logout");
+    }
+
+    private async Task<bool> IsAuthenticated()
+    {
+        var userCandidate = await Storage.GetItemAsync<HorizonIdentity>("Horizon:Session");
+
+        if (userCandidate is null || string.IsNullOrEmpty(userCandidate.UserId))
+            return false;
+
+        return true;
+    }
+}

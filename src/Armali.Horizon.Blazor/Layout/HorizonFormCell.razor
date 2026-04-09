@@ -1,0 +1,11 @@
+﻿<div class="mb-2">
+    <HorizonLabelText Text="@Label"/>
+    @ChildContent
+</div>
+
+@code {
+    [Parameter]
+    public string Label { get; set; } = "Field";
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+}

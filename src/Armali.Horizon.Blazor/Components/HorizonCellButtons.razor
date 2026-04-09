@@ -1,0 +1,10 @@
+﻿<td class="px-2">
+    <div class="flex w-full justify-center gap-2 py-1">
+        @ChildContent
+    </div>
+</td>
+
+@code {
+    [Parameter]
+    public required RenderFragment ChildContent { get; set; }
+}

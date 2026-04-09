@@ -1,0 +1,219 @@
+﻿@page "/maintenance"
+
+@using Armali.Horizon.Segaris.Services
+
+@inject MaintService MaintService
+@inject AssetService AssetService
+
+<HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="LoadData" />
+<HorizonLayout AppName="Segaris" PageName="Maintenance">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Entry" OnClick="@(() => PopupCreate())" />
+    </Sidebar>
+    <SidebarBottom>
+        
+    </SidebarBottom>
+    <Body>
+    
+    <HorizonTable Items="@Entities">
+        <Header>
+            <HorizonCellHeader TItem="MaintEntity" Name="Name" />
+            <HorizonCellHeader TItem="MaintEntity" Name="Date" />
+            <HorizonCellHeader TItem="MaintEntity" Name="Details" />
+            <HorizonCellHeader TItem="MaintEntity" Filterable="true" 
+                               ValueSelector="@(e => Index(Categories, e.CategoryId)?.Name ?? string.Empty)" Name="Category" />
+            <HorizonCellHeader TItem="MaintEntity" Filterable="true" 
+                               ValueSelector="@(e => Index(Statuses, e.StatusId)?.Name ?? string.Empty)" Name="Status" />
+            <HorizonCellHeader TItem="MaintEntity" Name="Actions" />
+        </Header>
+        <RowTemplate>
+            <HorizonCellTwoLine Title="@context.Name"
+                                Subtitle="@(context.AssetId is not null ? (AssetList.FirstOrDefault(a => a.Id == context.AssetId.Value)?.Name ?? "Deleted") : "—")"
+                                Center="false"
+                                Icon="@PrivacyIcon(context.IsPrivate, context.Creator, CurrentUser)" IconColor="@PrivacyColor(context.IsPrivate, context.Creator, CurrentUser)" />
+            <HorizonCellDateTime Content="@context.Date" />
+            <HorizonCellText Content="@context.Details" />
+            <HorizonCellText Content="@Index(Categories, context.CategoryId)?.Name" />
+            <HorizonCellStatus Content="@Index(Statuses, context.StatusId)" />
+            <HorizonCellButtons>
+                <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupEdit(context))"/>
+                <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupDelete(context))"/>
+            </HorizonCellButtons>
+        </RowTemplate>
+    </HorizonTable>
+    
+    </Body>
+</HorizonLayout>
+
+@if (ShowEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowEditPopup" OnCanceled="Refresh">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New MAINTENANCE" : "Edit MAINTENANCE")">
+            <Content>
+                <HorizonForm Model="TargetEntity" Columns="2">
+                    <HorizonFormCell Label="Name">
+                        <HorizonInputText @bind-Text="@TargetEntity!.Name"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Category">
+                        <HorizonCombobox Items="Categories.Select(c => c.Id)" @bind-Value="@TargetEntity!.CategoryId">
+                            <ItemTemplate Context="index">
+                                @Index(Categories, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Status">
+                        <HorizonCombobox Items="Statuses.Select(s => s.Id)" @bind-Value="@TargetEntity!.StatusId">
+                            <ItemTemplate Context="index">
+                                @Index(Statuses, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Details">
+                        <HorizonInputText @bind-Text="@TargetEntity!.Details"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Date">
+                        <HorizonInputDate @bind-Date="@TargetEntity!.Date"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Asset">
+                        <HorizonEntityLink LinkedName="@(TargetEntity!.AssetId is not null ? AssetList.FirstOrDefault(a => a.Id == TargetEntity.AssetId.Value)?.Name : null)"
+                                           OnSelectClicked="@(() => ShowAssetSelector = true)"
+                                           OnClearClicked="@(() => TargetEntity!.AssetId = null)" />
+                    </HorizonFormCell>
+                    
+                    <div class="mt-6">
+                        <HorizonCheckbox Text="Is private" @bind-Value="@TargetEntity!.IsPrivate" />
+                    </div>
+                </HorizonForm>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => DoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this entity?" />
+                <HorizonLabelText Text="@TargetEntity!.Name" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => DoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+<AssetSelectorPopup @bind-Visible="ShowAssetSelector"
+                    CurrentUser="@CurrentUser"
+                    OnSelected="OnAssetSelected" />
+
+@code {
+    
+    private bool ShowEditPopup;
+    private bool ShowDeletePopup;
+    private bool ShowAssetSelector;
+    private PopupIntent Intent = PopupIntent.None;
+    private string CurrentUser = string.Empty;
+
+    // MAINT module entities
+    private IEnumerable<MaintCategory> Categories = [];
+    private IEnumerable<MaintStatus> Statuses = [];
+    private IEnumerable<MaintEntity> Entities = [];
+    private MaintEntity? TargetEntity;
+    
+    // Activos disponibles para enlace
+    private IEnumerable<AssetEntity> AssetList = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Queries for the Maint module
+        Categories = await MaintService.GetMaintCategories();
+        Statuses = await MaintService.GetMaintStatuses();
+    }
+
+    private async Task LoadData()
+    {
+        AssetList = await AssetService.GetAssetEntities(CurrentUser);
+        await Refresh();
+    }
+    
+    private async Task Refresh()
+    {
+        Entities = await MaintService.GetMaintEntities(CurrentUser);
+    }
+
+    private void PopupCreate()
+    {
+        // Create initial state of target entity for the form
+        TargetEntity = new MaintEntity()
+        {
+            Date = DateTime.Today,
+            Creator = CurrentUser
+        };
+        
+        Intent = PopupIntent.Create;
+        ShowEditPopup = true;
+    }
+
+    private void PopupEdit(MaintEntity entity)
+    {
+        TargetEntity = entity;
+        Intent = PopupIntent.Edit;
+        ShowEditPopup = true;
+    }
+    
+    private void PopupDelete(MaintEntity entity)
+    {
+        TargetEntity = entity;
+        ShowDeletePopup = true;
+    }
+    
+    private async Task DoCreate()
+    {
+        // Call service to create entity
+        if (Intent is PopupIntent.Create)
+            await MaintService.AddMaint(TargetEntity!);
+        else
+            await MaintService.UpdateMaint(TargetEntity!);
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoDelete()
+    {
+        await MaintService.DeleteMaint(TargetEntity!.Id);
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+
+    private async Task DoNotCreate()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoNotDelete()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+    
+    private void OnAssetSelected(int assetId)
+    {
+        if (TargetEntity is not null)
+            TargetEntity.AssetId = assetId;
+    }
+}

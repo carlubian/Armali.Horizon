@@ -1,0 +1,78 @@
+﻿@using Armali.Horizon.Segaris.Services
+
+@inject AssetService AssetService
+
+@if (Visible)
+{
+    <HorizonPopup @bind-Visible="Visible">
+        <HorizonDialog Title="Select Asset">
+            <Content>
+                <HorizonTable Items="@AssetList" PageSize="8">
+                    <Header>
+                        <HorizonCellHeader TItem="AssetEntity" Name="Code" />
+                        <HorizonCellHeader TItem="AssetEntity" Name="Name" />
+                        <HorizonCellHeader TItem="AssetEntity" Name="" />
+                    </Header>
+                    <RowTemplate>
+                        <HorizonCellText Content="@context.AssetCode" />
+                        <HorizonCellText Content="@context.Name" Center="false" />
+                        <HorizonCellButtons>
+                            <HorizonMiniButton Color="hz-opera" Icon="fa-check" OnClick="@(() => Select(context))" />
+                        </HorizonCellButtons>
+                    </RowTemplate>
+                </HorizonTable>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => Close())" />
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@code {
+    [Parameter]
+    public bool Visible { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> VisibleChanged { get; set; }
+
+    /// <summary>
+    /// Usuario actual para filtrar activos por privacidad.
+    /// </summary>
+    [Parameter]
+    public string CurrentUser { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Devuelve el Id del activo seleccionado.
+    /// </summary>
+    [Parameter]
+    public EventCallback<int> OnSelected { get; set; }
+
+    private IEnumerable<AssetEntity> AssetList = [];
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Visible && !AssetList.Any())
+        {
+            AssetList = await AssetService.GetAssetEntities(CurrentUser);
+        }
+    }
+
+    private async Task Select(AssetEntity asset)
+    {
+        await OnSelected.InvokeAsync(asset.Id);
+        await Close();
+    }
+
+    private async Task Close()
+    {
+        Visible = false;
+        AssetList = [];
+        await VisibleChanged.InvokeAsync(false);
+    }
+}
+
+
+
+
+

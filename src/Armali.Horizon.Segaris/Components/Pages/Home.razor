@@ -1,0 +1,104 @@
+﻿@page "/"
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-User="CurrentUser" />
+<HorizonLayout AppName="Segaris" PageName="@PageTitle">
+    <Sidebar>
+        
+    </Sidebar>
+    <SidebarBottom>
+        
+    </SidebarBottom>
+    <Body>
+    <div class="grid grid-cols-4 items-center justify-center">
+        
+        <SegarisCard Title="CAPEX" Image="/images/capex.png" OnClick="@Capex" />
+        <SegarisCard Title="OPEX" Image="/images/opex.png" OnClick="@Opex" />
+        <SegarisCard Title="INVENTORY" Image="/images/inventory.png" OnClick="@Inventory" />
+        <SegarisCard Title="ASSETS" Image="/images/assets.png" OnClick="@Assets" />
+        
+        <SegarisCard Title="TRAVEL" Image="/images/travel.png" OnClick="@Travel" />
+        <SegarisCard Title="PROJECTS" Image="/images/task.png" OnClick="@Projects" />
+        <SegarisCard Title="ARCHIVE" Image="/images/archive.png" OnClick="@Archive" />
+        <SegarisCard Title="MAINTENANCE" Image="/images/maintenance.png" OnClick="@Maintenance" />
+        
+        <SegarisCard Title="FIREBIRD" Image="/images/phoenix.png" OnClick="@Firebird" />
+        <SegarisCard Title="CLOTHES" Image="/images/clothes.png" OnClick="@Clothes" />
+        <SegarisCard Title="MOOD" Image="/images/mood.png" OnClick="@Mood" />
+        <SegarisCard Title="ANALYTICS" Image="/images/chart.png" OnClick="@Capex" />
+        
+    </div>
+    </Body>
+</HorizonLayout>
+
+@code
+{
+    private string CurrentUser { get; set; } = "Unknown";
+    private const string Version = "4.0.1";
+
+    private string PageTitle
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(CurrentUser) || CurrentUser.Equals("Unknown"))
+                return $"v{Version}";
+            else
+                return $"v{Version} - {CurrentUser}";
+        }
+    }
+    
+    private void Capex()
+    {
+        Nav.NavigateTo("/capex");
+    }
+    
+    private void Opex()
+    {
+        Nav.NavigateTo("/opex");
+    }
+    
+    private void Inventory()
+    {
+        Nav.NavigateTo("/inv/vendors");
+    }
+    
+    private new void Assets()
+    {
+        Nav.NavigateTo("/assets");
+    }
+    
+    private void Travel()
+    {
+        Nav.NavigateTo("/travel");
+    }
+    
+    private void Projects()
+    {
+        Nav.NavigateTo("/projects");
+    }
+    
+    private void Archive()
+    {
+        Nav.NavigateTo("/archive");
+    }
+    
+    private void Maintenance()
+    {
+        Nav.NavigateTo("/maintenance");
+    }
+    
+    private void Firebird()
+    {
+        Nav.NavigateTo("/firebird");
+    }
+    
+    private void Clothes()
+    {
+        Nav.NavigateTo("/clothes");
+    }
+    
+    private void Mood()
+    {
+        Nav.NavigateTo("/mood");
+    }
+}

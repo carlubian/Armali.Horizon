@@ -1,0 +1,21 @@
+﻿<button class="h-20 w-32 bg-hz-spartan rounded-xl flex flex-col items-center justify-end overflow-hidden shadow-xl group cursor-pointer"
+        type="button"
+        @onclick="OnClick">
+    <div class="flex-1 flex items-center justify-center">
+        <i class=@($"text-hz-arendelle group-hover:text-{Color} text-4xl fa-solid {Icon}")></i> 
+    </div>
+    <div class=@($"w-full bg-{Color} text-hz-arendelle text-xs font-bold py-1 text-center uppercase font-hz-special")>
+        @Caption
+    </div>
+</button>
+
+@code {
+    [Parameter]
+    public string Color { get; set; } = "hz-opera";
+    [Parameter]
+    public string Caption { get; set; } = "Action";
+    [Parameter]
+    public string Icon { get; set; } = "fa-question";
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+}

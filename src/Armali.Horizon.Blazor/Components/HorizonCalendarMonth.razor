@@ -1,0 +1,105 @@
+﻿@using System.Globalization
+
+<div class="rounded-xl bg-hz-spartan p-3 shadow-xl">
+
+    @* Encabezado del mes *@
+    <div class="text-center text-hz-arendelle font-hz-header text-sm mb-2 select-none">
+        @MonthName
+    </div>
+
+    @* Encabezados de día de la semana (Lun–Dom) *@
+    <div class="grid grid-cols-7 gap-1 mb-1">
+        @foreach (var dow in _dayHeaders)
+        {
+            <div class="text-center text-hz-gray-light font-hz-special text-[10px] uppercase select-none">
+                @dow
+            </div>
+        }
+    </div>
+
+    @* Cuadrícula de días *@
+    <div class="grid grid-cols-7 gap-1">
+
+        @* Celdas vacías antes del primer día del mes *@
+        @for (var i = 0; i < _offset; i++)
+        {
+            <div class="aspect-square"></div>
+        }
+
+        @* Días del mes *@
+        @for (var day = 1; day <= _daysInMonth; day++)
+        {
+            var d = day;
+            var entries = _lookup[d].ToList();
+            var isToday = _today.HasValue && d == _today.Value;
+
+            @if (entries.Count > 0)
+            {
+                <div class="group relative">
+                    <div class=@($"aspect-square flex items-center justify-center rounded-lg bg-hz-opera text-hz-arendelle font-hz-text text-xs cursor-default select-none {(isToday ? "ring-2 ring-hz-sol" : "")}")>
+                        @d
+                    </div>
+
+                    @* Tooltip personalizado con CSS *@
+                    <div class="invisible group-hover:visible absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 bg-hz-styx text-hz-arendelle font-hz-text text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap pointer-events-none border border-hz-gray-light">
+                        @foreach (var entry in entries)
+                        {
+                            <div class="py-0.5">@entry.Label</div>
+                        }
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class=@($"aspect-square flex items-center justify-center rounded-lg text-hz-arendelle font-hz-text text-xs select-none {(isToday ? "ring-2 ring-hz-sol" : "")}")>
+                    @d
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>Año a mostrar.</summary>
+    [Parameter] public int Year { get; set; }
+
+    /// <summary>Mes a mostrar (1–12).</summary>
+    [Parameter] public int Month { get; set; }
+
+    /// <summary>Entradas del calendario para este mes.</summary>
+    [Parameter] public IEnumerable<HorizonCalendarEntry> Entries { get; set; } = [];
+
+    /// <summary>Si true, resalta el día de hoy con un anillo.</summary>
+    [Parameter] public bool HighlightToday { get; set; } = true;
+
+    private int _offset;
+    private int _daysInMonth;
+    private int? _today;
+    private ILookup<int, HorizonCalendarEntry> _lookup = 
+        Enumerable.Empty<HorizonCalendarEntry>().ToLookup(e => e.Day);
+    private string[] _dayHeaders = [];
+
+    private string MonthName => CultureInfo.CurrentCulture.DateTimeFormat.GetMonthName(Month);
+
+    protected override void OnParametersSet()
+    {
+        var firstDay = new DateTime(Year, Month, 1);
+        // Lunes = 0, Martes = 1, ..., Domingo = 6
+        _offset = ((int)firstDay.DayOfWeek + 6) % 7;
+        _daysInMonth = DateTime.DaysInMonth(Year, Month);
+        _lookup = Entries.ToLookup(e => e.Day);
+
+        // Determinar si "hoy" cae en este mes/año
+        var now = DateTime.Today;
+        _today = (HighlightToday && now.Year == Year && now.Month == Month) ? now.Day : null;
+
+        // Encabezados de día según la cultura actual, empezando en Lunes
+        var dtf = CultureInfo.CurrentCulture.DateTimeFormat;
+        _dayHeaders = new string[7];
+        for (var i = 0; i < 7; i++)
+        {
+            _dayHeaders[i] = dtf.GetShortestDayName((DayOfWeek)((i + 1) % 7));
+        }
+    }
+}
+

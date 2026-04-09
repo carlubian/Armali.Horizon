@@ -1,0 +1,47 @@
+﻿@typeparam TItem
+
+<th class="text-lg font-hz-header">
+    <div class="flex items-center justify-center gap-2">
+        <span>@Name</span>
+        @if (Filterable)
+        {
+            <button type="button" 
+                    class=@($"h-6 w-6 rounded-lg {(IsFilterActive ? "bg-hz-opera" : "bg-hz-tribunal")} flex items-center justify-center cursor-pointer hover:opacity-80")
+                    @onclick="HandleFilterClick">
+                <i class="fa-solid fa-filter text-xs text-hz-arendelle"></i>
+            </button>
+        }
+    </div>
+</th>
+
+@code {
+    [CascadingParameter]
+    public HorizonTable<TItem>? Table { get; set; }
+    
+    [Parameter]
+    public string Name { get; set; } = "Column";
+    
+    [Parameter]
+    public bool Filterable { get; set; }
+    
+    [Parameter]
+    public Func<TItem, string>? ValueSelector { get; set; }
+    
+    private bool IsFilterActive => Table?.HasActiveFilter(Name) ?? false;
+
+    protected override void OnParametersSet()
+    {
+        if (Filterable && Table != null && ValueSelector != null)
+        {
+            Table.RegisterFilterableColumn(Name, ValueSelector);
+        }
+    }
+    
+    private void HandleFilterClick()
+    {
+        if (Table != null && Filterable)
+        {
+            Table.OpenFilterPopup(Name);
+        }
+    }
+}

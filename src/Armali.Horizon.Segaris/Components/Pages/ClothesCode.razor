@@ -1,0 +1,172 @@
+﻿@page "/clothes/code"
+
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-User="CurrentUser" />
+<HorizonLayout AppName="Segaris" PageName="Clothes">
+    <Sidebar>
+        
+    </Sidebar>
+    <SidebarBottom>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-shirt" Caption="Garments" OnClick="@(() => NavigateClothes())" />
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Code info" OnClick="@(() => NavigateCode())"/>
+    </SidebarBottom>
+    <Body>
+        <HorizonLabelTitle Text="Garment Code format" />
+        <HorizonLabelText Text="AB-CCCDD" />
+        <HorizonList>
+            <HorizonListElement Content="A: Garment type identifier" />
+            <HorizonListElement Content="B: Wash type identifier" />
+            <HorizonListElement Content="C: Purchase date" />
+            <HorizonListElement Content="D: Hexadecimal ID" />
+        </HorizonList>
+        
+        <HorizonColumns>
+            
+            <!-- Garment type table -->
+            <HorizonStaticTable>
+                <Header>
+                    <HorizonStaticTableHeader Name="Garment type ID" />
+                    <HorizonStaticTableHeader Name="Translation" />
+                </Header>
+                <Body>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">A</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Exterior T-shirt, short sleeves</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">B</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Exterior T-shirt, long sleeves</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">C</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Interior T-shirt, short sleeves</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">D</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Interior T-shirt, long sleeves</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">E</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Shirt, short sleeves</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">F</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Shirt, long sleeves</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">G</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Polo, short sleeves</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">H</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Polo, long sleeves</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">S</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Trousers, short</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">T</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Trousers, long</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">U</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Undergarments</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">1</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Interior socks, summer</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">2</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Interior socks, winter</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">3</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Exterior socks, summer</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">4</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Exterior socke, winter</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">5</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Interior footwear</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">6</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Exterior footwear</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">J</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Light jacket</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">K</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Heavy jacket</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">L</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Coat</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                </Body>
+            </HorizonStaticTable>
+            
+            <!-- Wash type table -->
+            <HorizonStaticTable>
+                <Header>
+                    <HorizonStaticTableHeader Name="Wash type ID" />
+                    <HorizonStaticTableHeader Name="Translation" />
+                </Header>
+                <Body>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">B</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Washes with white clothes</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">C</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Washes with color clothes</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">X</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Special wash, not mixble or needs special programs or products</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">N</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Not washable at home, needs either hand wash or dry cleaning</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                </Body>
+            </HorizonStaticTable>
+            
+        </HorizonColumns>
+        
+        <HorizonParagraph>
+            Purchase date: <br />
+            The first digit represents the quarter of the year (1 to 4). <br />
+            The second and third digits represent the year of purchase, in two digits format (e.g. 23 for 2023).
+        </HorizonParagraph>
+        
+        <HorizonParagraph>
+            Hexadecimal ID: <br />
+            A two letter incremental number that identifies each garment bought in the same
+            quarter of the same year, regardless of its type or wash type. <br/>
+            Starts at 01 and goes up to FF.
+        </HorizonParagraph>
+        
+    </Body>
+</HorizonLayout>
+
+@code {
+    private string CurrentUser = string.Empty;
+    
+    private void NavigateClothes()
+    {
+        Nav.NavigateTo("/clothes");
+    }
+
+    private void NavigateCode()
+    {
+        Nav.NavigateTo("/clothes/code");
+    }
+}

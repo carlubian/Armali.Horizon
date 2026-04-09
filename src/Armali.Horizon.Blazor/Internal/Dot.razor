@@ -1,0 +1,30 @@
+﻿<div class=@($"bg-{Bg} w-4 h-4 border-4 border-{Border}-light rounded-full self-center mx-4")></div>
+
+@code {
+    [Parameter]
+    public string Color { get; set; }
+
+    private string Bg
+    {
+        get => Color.ToLowerInvariant() switch
+        {
+            "blue" => "hz-apollo",
+            "green" => "hz-opera",
+            "red" => "hz-tribunal",
+            "gold" => "hz-sol",
+            _ => "hz-styx"
+        };
+    }
+
+    private string Border
+    {
+        get => Color.ToLowerInvariant() switch
+        {
+            "blue" => "hz-apollo",
+            "green" => "hz-opera",
+            "red" => "hz-tribunal",
+            "gold" => "hz-sol",
+            _ => "hz-styx"
+        };
+    }
+}

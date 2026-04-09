@@ -1,0 +1,377 @@
+﻿@page "/inv/orders"
+
+@using Armali.Horizon.Segaris.Services
+
+@inject InventoryService InventoryService
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="LoadData" />
+<HorizonLayout AppName="Segaris" PageName="Orders">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Order" OnClick="@(() => PopupCreate())" />
+    </Sidebar>
+    <SidebarBottom>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-briefcase" Caption="Vendors" OnClick="@InventoryVendors" />
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-boxes-stacked" Caption="Items" OnClick="@InventoryItems" />
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-truck-fast" Caption="Orders" OnClick="@InventoryOrders" />
+    </SidebarBottom>
+    <Body>
+    
+    <HorizonTable Items="@Entities">
+        <Header>
+            <HorizonCellHeader TItem="InvOrderEntity" Filterable="true" 
+                               ValueSelector="@(e => Index(Vendors, e.VendorId)?.Name ?? "Private vendor")" Name="Vendor" />
+            <HorizonCellHeader TItem="InvOrderEntity" Name="Info" />
+            <HorizonCellHeader TItem="InvOrderEntity" Name="Dates" />
+            <HorizonCellHeader TItem="InvOrderEntity" Filterable="true" 
+                               ValueSelector="@(e => Index(Statuses, e.StatusId)?.Name ?? string.Empty)" Name="Status" />
+            <HorizonCellHeader TItem="InvOrderEntity" Name="Actions" />
+        </Header>
+        <RowTemplate>
+            <HorizonCellText Content="@(Index(Vendors, context.VendorId)?.Name ?? "Private vendor")" />
+            <HorizonCellTwoLine Title="@($"{EntityStats[context.Id].ItemCount} items")"
+                                Subtitle="@($"{EntityStats[context.Id].TotalAmount} €")"/>
+            <HorizonCellTwoLine Title="@context.PurchaseDate" Subtitle="@context.ReceptionDate" />
+            <HorizonCellStatus Content="@Index(Statuses, context.StatusId)" />
+            <HorizonCellButtons>
+                <HorizonMiniButton Color="hz-sol" Icon="fa-boxes-stacked" OnClick="@(() => PopupSubEntity(context))"/>
+                <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupEdit(context))"/>
+                <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupDelete(context))"/>
+            </HorizonCellButtons>
+        </RowTemplate>
+    </HorizonTable>
+    
+    </Body>
+</HorizonLayout>
+
+@if (ShowEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowEditPopup" OnCanceled="Refresh">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New Order" : "Edit Order")">
+            <Content>
+                <HorizonForm Model="TargetEntity" Columns="2">
+                    <HorizonFormCell Label="Vendor">
+                        <HorizonCombobox Items="Vendors.Select(c => c.Id)" @bind-Value="@TargetEntity!.VendorId">
+                            <ItemTemplate Context="index">
+                                @Index(Vendors, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Status">
+                        <HorizonCombobox Items="Statuses.Select(s => s.Id)" @bind-Value="@TargetEntity!.StatusId">
+                            <ItemTemplate Context="index">
+                                @Index(Statuses, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Purchase Date">
+                        <HorizonInputDate @bind-Date="@TargetEntity!.PurchaseDate"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Reception Date">
+                        <HorizonInputDate @bind-Date="@TargetEntity!.ReceptionDate"/>
+                    </HorizonFormCell>
+                    
+                    <div class="mt-6">
+                        <HorizonCheckbox Text="Is private" @bind-Value="@TargetEntity!.IsPrivate" />
+                    </div>
+                </HorizonForm>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => DoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this entity?" />
+                <HorizonLabelText Text="@TargetEntity!.PurchaseDate.ToString("yyyy MMMM dd")" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => DoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowSubEntityPopup)
+{
+    <HorizonPopup @bind-Visible="ShowSubEntityPopup">
+        <HorizonDialog Title="@(Index(Vendors, TargetEntity!.VendorId)?.Name ?? "Private vendor")">
+            <Content>
+                <HorizonTable Items="@SubEntities">
+                    <Header>
+                        <HorizonCellHeader TItem="InvOrderSubEntity" Filterable="true" 
+                                           ValueSelector="@(e => Index(Items, e.ItemId)?.Name ?? "Private item")" Name="Item" />
+                        <HorizonCellHeader TItem="InvOrderSubEntity" Name="Item count" />
+                        <HorizonCellHeader TItem="InvOrderSubEntity" Name="Total amount" />
+                        <HorizonCellHeader TItem="InvOrderSubEntity" Name="Actions" />
+                    </Header>
+                    <RowTemplate Context="subEntity">
+                        <HorizonCellText Content="@(Index(Items, subEntity.ItemId)?.Name ?? "Private item")" />
+                        <HorizonCellText Content="@subEntity.ItemCount" />
+                        <HorizonCellCurrency Content="@subEntity.Amount" />
+                        <HorizonCellButtons>
+                            <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupSubEntityEdit(subEntity))"/>
+                            <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupSubEntityDelete(subEntity))"/>
+                        </HorizonCellButtons>
+                    </RowTemplate>
+                </HorizonTable>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-plus" Caption="Add Expense" OnClick="@(() => PopupSubEntityCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowSubEntityEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowSubEntityEditPopup" OnCanceled="SubEntityRefresh">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New Item" : "Edit Item")">
+            <Content>
+                <HorizonForm Model="TargetSubEntity" Columns="2">
+                    <HorizonFormCell Label="Item">
+                        <HorizonCombobox Items="Items.Select(c => c.Id)" @bind-Value="@TargetSubEntity!.ItemId">
+                            <ItemTemplate Context="index">
+                                @Index(Items, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Item count">
+                        <HorizonInputInteger @bind-Amount="@TargetSubEntity!.ItemCount"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Total amount">
+                        <HorizonInputNumber @bind-Amount="@TargetSubEntity!.Amount"/>
+                    </HorizonFormCell>
+                </HorizonForm>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => SubEntityDoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => SubEntityDoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowSubEntityDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowSubEntityDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this entity?" />
+                <HorizonLabelText Text="@(Index(Items, TargetSubEntity!.ItemId)?.Name ?? "Private item")" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => SubEntityDoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => SubEntityDoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@code {
+    
+    private bool ShowEditPopup;
+    private bool ShowDeletePopup;
+    private bool ShowSubEntityPopup;
+    private bool ShowSubEntityEditPopup;
+    private bool ShowSubEntityDeletePopup;
+    private PopupIntent Intent = PopupIntent.None;
+    private string CurrentUser = string.Empty;
+
+    // INVENTORY module entities
+    private IEnumerable<InvVendorEntity> Vendors = [];
+    private IEnumerable<InvItemEntity> Items = [];
+    private IEnumerable<InvOrderStatus> Statuses = [];
+    private IEnumerable<InvOrderEntity> Entities = [];
+    private InvOrderEntity? TargetEntity;
+    private IEnumerable<InvOrderSubEntity> SubEntities = [];
+    private InvOrderSubEntity? TargetSubEntity;
+    private IDictionary<int, InvOrderStats> EntityStats = new Dictionary<int, InvOrderStats>();
+    
+    private void InventoryVendors()
+    {
+        Nav.NavigateTo("/inv/vendors");
+    }
+    
+    private void InventoryItems()
+    {
+        Nav.NavigateTo("/inv/items");
+    }
+    
+    private void InventoryOrders()
+    {
+        Nav.NavigateTo("/inv/orders");
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Queries for the Inventory module
+        Statuses = await InventoryService.GetInvOrderStatuses();
+    }
+
+    private async Task LoadData()
+    {
+        Vendors = await InventoryService.GetInvVendorEntities(CurrentUser);
+        await Refresh();
+    }
+    
+    private async Task Refresh()
+    {
+        Entities = await InventoryService.GetInvOrderEntities(CurrentUser);
+        
+        foreach (var Entity in Entities)
+        {
+            EntityStats[Entity.Id] = await GetStats(Entity.Id);
+        }
+    }
+
+    private void PopupCreate()
+    {
+        // Create initial state of target entity for the form
+        TargetEntity = new InvOrderEntity()
+        {
+            Creator = CurrentUser,
+            PurchaseDate = DateTime.Today,
+            ReceptionDate = DateTime.Today.AddDays(7)
+        };
+        
+        Intent = PopupIntent.Create;
+        ShowEditPopup = true;
+    }
+
+    private void PopupEdit(InvOrderEntity entity)
+    {
+        TargetEntity = entity;
+        Intent = PopupIntent.Edit;
+        ShowEditPopup = true;
+    }
+    
+    private void PopupDelete(InvOrderEntity entity)
+    {
+        TargetEntity = entity;
+        ShowDeletePopup = true;
+    }
+    
+    private async Task DoCreate()
+    {
+        // Call service to create entity
+        if (Intent is PopupIntent.Create)
+            await InventoryService.AddInvOrder(TargetEntity!);
+        else
+            await InventoryService.UpdateInvOrder(TargetEntity!);
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoDelete()
+    {
+        await InventoryService.DeleteInvOrder(TargetEntity!.Id);
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+
+    private async Task DoNotCreate()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoNotDelete()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+    
+    private async Task SubEntityRefresh()
+    {
+        Items = await InventoryService.GetInvItemByVendor(TargetEntity!.VendorId, CurrentUser);
+        SubEntities = await InventoryService.GetInvOrderSubEntities(TargetEntity!);
+    }
+
+    private async Task PopupSubEntity(InvOrderEntity entity)
+    {
+        TargetEntity = entity;
+        await SubEntityRefresh();
+        ShowSubEntityPopup = true;
+    }
+    
+    private void PopupSubEntityCreate()
+    {
+        // Create initial state of target entity for the form
+        TargetSubEntity = new InvOrderSubEntity()
+        {
+            OrderId = TargetEntity!.Id,
+            ItemCount = 1
+        };
+        
+        Intent = PopupIntent.Create;
+        ShowSubEntityEditPopup = true;
+    }
+    
+    private void PopupSubEntityEdit(InvOrderSubEntity entity)
+    {
+        TargetSubEntity = entity;
+        Intent = PopupIntent.Edit;
+        ShowSubEntityEditPopup = true;
+    }
+    
+    private void PopupSubEntityDelete(InvOrderSubEntity entity)
+    {
+        TargetSubEntity = entity;
+        ShowSubEntityDeletePopup = true;
+    }
+    
+    private async Task SubEntityDoCreate()
+    {
+        // Call service to create entity
+        if (Intent is PopupIntent.Create)
+            await InventoryService.AddInvOrderSubEntity(TargetSubEntity!);
+        else
+            await InventoryService.UpdateInvOrderSubEntity(TargetSubEntity!);
+        await SubEntityRefresh();
+        ShowSubEntityEditPopup = false;
+    }
+    
+    private async Task SubEntityDoDelete()
+    {
+        await InventoryService.DeleteInvOrderSubEntity(TargetSubEntity!.Id);
+        await SubEntityRefresh();
+        ShowSubEntityDeletePopup = false;
+    }
+
+    private async Task SubEntityDoNotCreate()
+    {
+        TargetSubEntity = null;
+        await SubEntityRefresh();
+        ShowSubEntityEditPopup = false;
+    }
+    
+    private async Task SubEntityDoNotDelete()
+    {
+        TargetSubEntity = null;
+        await SubEntityRefresh();
+        ShowSubEntityDeletePopup = false;
+    }
+    
+    private async Task<InvOrderStats> GetStats(int entityId)
+    {
+        if (entityId == 0)
+            return new InvOrderStats();
+        return await InventoryService.GetInvOrderStats(entityId);
+    }
+}

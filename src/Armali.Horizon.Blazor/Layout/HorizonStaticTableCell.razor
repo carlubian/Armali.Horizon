@@ -1,0 +1,11 @@
+﻿<td class=@($"px-2 text-hz-arendelle font-hz-text {(Center ? "text-center" : "")}")>
+    @ChildContent
+</td>
+
+@code {
+    [Parameter]
+    public RenderFragment ChildContent { get; set; }
+    
+    [Parameter]
+    public bool Center { get; set; }
+}

@@ -1,0 +1,43 @@
+﻿@using Armali.Horizon.Blazor.Services
+@using Armali.Horizon.Core.Model
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+
+@inject NavigationManager Nav
+@inject HorizonSessionService Storage
+
+@rendermode InteractiveServer
+
+@code {
+    [Parameter]
+    public string User { get; set; } = "";
+    [Parameter]
+    public EventCallback<string> UserChanged { get; set; }
+    
+    /// <summary>
+    /// Evento que se dispara una vez que el usuario ha sido autenticado.
+    /// Las páginas deben enlazar aquí la carga de datos que depende del usuario.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnAuthenticated { get; set; }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!await IsAuthenticated())
+        {
+            Nav.NavigateTo("/horizon/login", false);
+        }
+    }
+    
+    private async Task<bool> IsAuthenticated()
+    {
+        var userCandidate = await Storage.GetItemAsync<HorizonIdentity>("Horizon:Session");
+
+        if (userCandidate is null || string.IsNullOrEmpty(userCandidate.UserId))
+            return false;
+
+        await UserChanged.InvokeAsync(userCandidate.UserId);
+        await OnAuthenticated.InvokeAsync();
+        return true;
+    }
+
+}

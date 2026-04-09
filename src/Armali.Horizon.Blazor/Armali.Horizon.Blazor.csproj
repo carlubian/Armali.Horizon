@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+    </PropertyGroup>
+
+
+    <ItemGroup>
+        <SupportedPlatform Include="browser"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="10.0.1"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Content Update="wwwroot\armali-dark-notext.png">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Armali.Horizon.Core\Armali.Horizon.Core.csproj" />
+    </ItemGroup>
+
+    <Target Name="TailwindBuild" BeforeTargets="Build" Condition="'$(SkipTailwindBuild)' != 'true'">
+        <Exec Command=".\tailwindcss.exe -i .\wwwroot\app.css -o .\wwwroot\tailwind.css --minify" />
+    </Target>
+
+</Project>

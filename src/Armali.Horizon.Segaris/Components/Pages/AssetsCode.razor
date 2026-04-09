@@ -1,0 +1,180 @@
+﻿@page "/assets/code"
+
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-User="CurrentUser" />
+<HorizonLayout AppName="Segaris" PageName="Clothes">
+    <Sidebar>
+        
+    </Sidebar>
+    <SidebarBottom>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-warehouse" Caption="Assets" OnClick="@(() => NavigateAssets())" />
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Code info" OnClick="@(() => NavigateCode())"/>
+    </SidebarBottom>
+    <Body>
+        <HorizonLabelTitle Text="Asset Code format" />
+        <HorizonLabelText Text="AB-CCCDD" />
+        <HorizonList>
+            <HorizonListElement Content="A: Asset type identifier" />
+            <HorizonListElement Content="B: Expense type identifier" />
+            <HorizonListElement Content="C: Purchase date" />
+            <HorizonListElement Content="D: Hexadecimal ID" />
+        </HorizonList>
+        
+        <HorizonColumns>
+            
+            <!-- Garment type table -->
+            <HorizonStaticTable>
+                <Header>
+                    <HorizonStaticTableHeader Name="Asset type ID" />
+                    <HorizonStaticTableHeader Name="Translation" />
+                </Header>
+                <Body>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">1</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Desktop computer</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">2</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Servers and nodes</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">3</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Laptops or tablets</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">A</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Smartphones</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">D</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Desktop consoles</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">E</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Portable consoles</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">F</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Hybrid consoles</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">M</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Monitors</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">T</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Televisions</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">H</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Paper printers</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">J</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Filament printers</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">K</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Resin printers</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">1</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Large appliances</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">2</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Small appliances</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">4</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Large furniture</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">5</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Small furniture</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">T</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Fixed decorations</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">U</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Portable decorations</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">W</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Temporal decorations</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                </Body>
+            </HorizonStaticTable>
+            
+            <!-- Wash type table -->
+            <HorizonStaticTable>
+                <Header>
+                    <HorizonStaticTableHeader Name="Expense type ID" />
+                    <HorizonStaticTableHeader Name="Translation" />
+                </Header>
+                <Body>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">A</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Independent Capex, billed to Armali</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">E</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Project related, billed to Armali</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">B</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Independent Capex, billed to Common Fund</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">C</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Project related, billed to Common Fund</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">M</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Independent Capex, billed as Business Expense</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">P</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Project related, billed as Business Expense</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell Center="true">X</HorizonStaticTableCell>
+                        <HorizonStaticTableCell>Other source that doesn't involve direct expenditure</HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                </Body>
+            </HorizonStaticTable>
+            
+        </HorizonColumns>
+        
+        <HorizonParagraph>
+            Purchase date: <br />
+            The first digit represents the quarter of the year (1 to 4). <br />
+            The second and third digits represent the year of purchase, in two digits format (e.g. 23 for 2023).
+        </HorizonParagraph>
+        
+        <HorizonParagraph>
+            Hexadecimal ID: <br />
+            A two letter incremental number that identifies each asset bought in the same
+            quarter of the same year, regardless of its type or expense type. <br/>
+            Starts at 01 and goes up to FF.
+        </HorizonParagraph>
+        
+    </Body>
+</HorizonLayout>
+
+@code {
+    private string CurrentUser = string.Empty;
+    
+    private void NavigateAssets()
+    {
+        Nav.NavigateTo("/assets");
+    }
+
+    private void NavigateCode()
+    {
+        Nav.NavigateTo("/assets/code");
+    }
+}

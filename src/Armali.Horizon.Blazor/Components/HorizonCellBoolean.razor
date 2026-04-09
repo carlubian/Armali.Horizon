@@ -1,0 +1,29 @@
+﻿<td class=@($"px-2 text-hz-{TextColor} font-hz-text font-semibold {(Center ? "text-center" : "")}")>
+    @StringValue
+</td>
+
+@code {
+    [Parameter]
+    public bool Content { get; set; }
+    
+    [Parameter]
+    public bool TrueIsPositive { get; set; } = true;
+
+    [Parameter] 
+    public bool Center { get; set; } = true;
+
+    private string StringValue => Content ? "Yes" : "No";
+
+    private string TextColor
+    {
+        get
+        {
+            if (TrueIsPositive)
+            {
+                return Content ? "opera" : "tribunal";
+            }
+
+            return Content ? "tribunal" : "opera";
+        }
+    }
+}

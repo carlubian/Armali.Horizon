@@ -1,0 +1,11 @@
+﻿<td class="px-2 text-hz-arendelle font-hz-text text-center">@StringValue</td>
+
+@code {
+    [Parameter]
+    public DateTime Content { get; set; }
+    
+    [Parameter]
+    public string Format { get; set; } = "yyyy-MMM-dd";
+    
+    private string StringValue => Content.ToString(Format);
+}

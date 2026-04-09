@@ -1,0 +1,28 @@
+﻿<button type="button"
+        class="h-10 w-full rounded-xl bg-hz-styx text-hz-arendelle placeholder:text-hz-gray font-hz-text shadow-xl flex items-center overflow-hidden cursor-pointer"
+        @onclick="OnButtonClicked">
+    <div class=@($"flex-1 flex h-full bg-{Color} items-center justify-center")>
+        <i class=@($"inline-block align-middle text-hz-arendelle text-3xl fa-solid {Icon}")></i>
+    </div>
+    <div class="w-full text-hz-arendelle group-hover:text-hz-meridian text-xs font-bold py-1 text-center uppercase font-hz-special">
+        @Text
+    </div>
+</button>
+
+@code {
+    [Parameter]
+    public string Text { get; set; } = "Checkbox";
+    [Parameter]
+    public bool Value { get; set; }
+    [Parameter]
+    public EventCallback<bool> ValueChanged { get; set; }
+    
+    private string Color => Value ? "hz-opera" : "hz-tribunal";
+    private string Icon => Value ? "fa-check" : "fa-xmark";
+
+    private Task OnButtonClicked()
+    {
+        Value = !Value;
+        return ValueChanged.InvokeAsync(Value);
+    }
+}

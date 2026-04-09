@@ -1,0 +1,20 @@
+﻿@page "/horizon/logout"
+
+@using Armali.Horizon.Blazor.Services
+@using static Microsoft.AspNetCore.Components.Web.RenderMode
+
+@inject HorizonSessionService Storage
+@inject NavigationManager Nav
+
+@rendermode InteractiveServer
+
+<div class="bg-hz-styx h-screen w-screen">
+</div>
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await Storage.RemoveItemAsync("Horizon:Session");
+        Nav.NavigateTo("/", true);
+    }
+}

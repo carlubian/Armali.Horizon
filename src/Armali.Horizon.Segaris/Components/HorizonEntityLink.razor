@@ -1,0 +1,53 @@
+﻿@* Componente para mostrar y gestionar un enlace opcional a otra entidad (proyecto, activo, etc.) *@
+
+<div class="rounded-xl overflow-hidden bg-hz-styx text-hz-arendelle font-hz-text shadow-xl h-10 flex flex-row items-center">
+    @if (!string.IsNullOrEmpty(LinkedName))
+    {
+        <div class="flex-1 px-3 truncate flex items-center gap-2">
+            <i class="fa-solid fa-link text-hz-opera text-xs"></i>
+            <span>@LinkedName</span>
+        </div>
+    }
+    else
+    {
+        <div class="flex-1 px-3 truncate text-hz-gray opacity-60">
+            No link
+        </div>
+    }
+    <div class="flex flex-row h-full">
+        <button type="button"
+                class="h-full w-10 bg-hz-apollo flex items-center justify-center cursor-pointer hover:opacity-80"
+                @onclick="OnSelectClicked">
+            <i class="fa-solid fa-magnifying-glass text-hz-arendelle"></i>
+        </button>
+        @if (!string.IsNullOrEmpty(LinkedName))
+        {
+            <button type="button"
+                    class="h-full w-10 bg-hz-tribunal flex items-center justify-center cursor-pointer hover:opacity-80"
+                    @onclick="OnClearClicked">
+                <i class="fa-solid fa-xmark text-hz-arendelle"></i>
+            </button>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>
+    /// Nombre de la entidad vinculada (resuelto por el padre). Null/vacío = sin enlace.
+    /// </summary>
+    [Parameter]
+    public string? LinkedName { get; set; }
+
+    /// <summary>
+    /// Se invoca al pulsar el botón de seleccionar (lupa) para abrir el popup selector.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnSelectClicked { get; set; }
+
+    /// <summary>
+    /// Se invoca al pulsar el botón de limpiar (X) para eliminar el enlace.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnClearClicked { get; set; }
+}
+

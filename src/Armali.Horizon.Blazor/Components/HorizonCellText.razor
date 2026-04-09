@@ -1,0 +1,53 @@
+﻿@typeparam TItem
+
+<td class=@($"px-2 text-hz-arendelle font-hz-text {(Center ? "text-center" : "")}")>
+    @if (!string.IsNullOrEmpty(Icon))
+    {
+        <div class="flex items-center gap-2">
+            <i class=@($"fa-solid {Icon} {IconColor} text-xs flex-shrink-0")></i>
+            <span>@StringValue</span>
+        </div>
+    }
+    else
+    {
+        @StringValue
+    }
+</td>
+
+@code {
+    [Parameter]
+    public TItem? Content { get; set; }
+
+    [Parameter] 
+    public bool Center { get; set; } = true;
+
+    /// <summary>
+    /// Nombre del icono Font Awesome a mostrar (e.g. "fa-lock"). Si está vacío, no se muestra icono.
+    /// </summary>
+    [Parameter]
+    public string Icon { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Clase de color para el icono (e.g. "text-hz-tribunal").
+    /// </summary>
+    [Parameter]
+    public string IconColor { get; set; } = string.Empty;
+
+    private string StringValue
+    {
+        get
+        {
+            if (Content is null)
+                return "No content";
+            return (Content! switch
+            {
+                string s => s,
+                int i => i.ToString(),
+                float f => f.ToString("F2"),
+                double d => d.ToString("F2"),
+                decimal m => m.ToString("F2"),
+                _ => Content!.ToString()
+            })!;
+        }
+    }
+}

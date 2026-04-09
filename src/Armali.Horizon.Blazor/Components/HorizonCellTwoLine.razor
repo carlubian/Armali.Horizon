@@ -1,0 +1,79 @@
+﻿@typeparam TItem
+
+<td class=@($"px-2 text-hz-arendelle font-hz-text {(Center ? "text-center" : "")}")>
+    @if (!string.IsNullOrEmpty(Icon))
+    {
+        <div class="flex items-center gap-2">
+            <i class=@($"fa-solid {Icon} {IconColor} text-xs flex-shrink-0")></i>
+            <div>
+                @TitleValue <br />
+                @SubtitleValue
+            </div>
+        </div>
+    }
+    else
+    {
+        @TitleValue <br />
+        @SubtitleValue
+    }
+</td>
+
+@code {
+    [Parameter]
+    public TItem? Title { get; set; }
+    [Parameter]
+    public TItem? Subtitle { get; set; }
+
+    [Parameter] 
+    public bool Center { get; set; } = true;
+
+    /// <summary>
+    /// Nombre del icono Font Awesome a mostrar (e.g. "fa-lock"). Si está vacío, no se muestra icono.
+    /// </summary>
+    [Parameter]
+    public string Icon { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Clase de color para el icono (e.g. "text-hz-tribunal").
+    /// </summary>
+    [Parameter]
+    public string IconColor { get; set; } = string.Empty;
+
+    private string TitleValue
+    {
+        get
+        {
+            if (Title is null)
+                return "No content";
+            return (Title! switch
+            {
+                string s => s,
+                int i => i.ToString(),
+                float f => f.ToString("F2"),
+                double d => d.ToString("F2"),
+                decimal m => m.ToString("F2"),
+                DateTime dt => dt.ToString("yyyy-MMM-dd"),
+                _ => Title!.ToString()
+            })!;
+        }
+    }
+    
+    private string SubtitleValue
+    {
+        get
+        {
+            if (Subtitle is null)
+                return "No content";
+            return (Subtitle! switch
+            {
+                string s => s,
+                int i => i.ToString(),
+                float f => f.ToString("F2"),
+                double d => d.ToString("F2"),
+                decimal m => m.ToString("F2"),
+                DateTime dt => dt.ToString("yyyy-MMM-dd"),
+                _ => Subtitle!.ToString()
+            })!;
+        }
+    }
+}

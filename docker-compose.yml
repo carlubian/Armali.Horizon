@@ -1,0 +1,21 @@
+﻿services:
+  segaris:
+    image: turegistro.azurecr.io/armali-horizon-segaris:latest
+    container_name: segaris
+    ports:
+      - "5122:5122"
+    volumes:
+      - segaris-data:/persistence
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+    restart: unless-stopped
+
+volumes:
+  segaris-data:
+
+  armali.horizon.autoconfig:
+    image: armali.horizon.autoconfig
+    build:
+      context: .
+      dockerfile: src/Armali.Horizon.Autoconfig/Dockerfile
+

@@ -1,0 +1,11 @@
+﻿<button type="button" class="h-16 w-16 p-4 group cursor-pointer"
+        @onclick="OnClick">
+    <i class=@($"text-hz-arendelle group-hover:text-hz-meridian text-4xl fa-solid {Icon}")></i> 
+</button>
+
+@code {
+    [Parameter]
+    public string Icon { get; set; } = "fa-question";
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+}

@@ -1,0 +1,48 @@
+﻿@using System.Globalization
+@using Microsoft.AspNetCore.Components.Forms
+
+<div class="rounded-xl bg-hz-styx text-hz-arendelle placeholder:text-hz-gray font-hz-text shadow-xl h-10 pl-2 flex overflow-hidden">
+    <InputNumber @bind-Value="Amount" @oninput="@OnAmountChanged"
+                 class="w-full"/>
+    
+    <div class="flex-1 flex h-full items-center justify-center bg-hz-apollo cursor-pointer" 
+         @onclick="Decrement">
+        <i class=@($"inline-block align-middle text-hz-arendelle hover:text-hz-sol text-3xl fa-solid fa-minus")></i>
+    </div>
+    
+    <div class="flex-1 flex h-full items-center justify-center bg-hz-apollo cursor-pointer rounded-r-xl" 
+         @onclick="Increment">
+        <i class=@($"inline-block align-middle text-hz-arendelle hover:text-hz-sol text-3xl fa-solid fa-plus")></i>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public int Amount { get; set; }
+    
+    [Parameter]
+    public EventCallback<int> AmountChanged { get; set; }
+    
+    private Task OnAmountChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), NumberStyles.Number, CultureInfo.InvariantCulture, out var newValue))
+        {
+            Amount = newValue;
+            return AmountChanged.InvokeAsync(Amount);
+        }
+        
+        return Task.CompletedTask;
+    }
+
+    private async Task Increment()
+    {
+        Amount += 1;
+        await AmountChanged.InvokeAsync(Amount);
+    }
+    
+    private async Task Decrement()
+    {
+        Amount -= 1;
+        await AmountChanged.InvokeAsync(Amount);
+    }
+}
