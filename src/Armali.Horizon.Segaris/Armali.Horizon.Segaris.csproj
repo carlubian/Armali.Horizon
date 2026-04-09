@@ -22,7 +22,7 @@
         <PackageReference Include="Azure.Storage.Files.DataLake" Version="12.25.0" />
         <PackageReference Include="Microsoft.AspNetCore.App.Internal.Assets" Version="10.0.5" />
         <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.1" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.5" />
     </ItemGroup>
 
     <Target Name="TailwindBuild" BeforeTargets="Build" Condition="'$(SkipTailwindBuild)' != 'true'">
