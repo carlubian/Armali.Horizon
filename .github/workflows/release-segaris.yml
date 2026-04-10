@@ -68,7 +68,7 @@ jobs:
 
       # ── 6. Build & Push de la imagen Docker ─────────────────
       - name: Build & Push imagen Docker
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: src/Armali.Horizon.Segaris/Dockerfile
