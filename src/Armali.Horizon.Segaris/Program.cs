@@ -1,4 +1,5 @@
 using Armali.Horizon.Blazor.Services;
+using Armali.Horizon.Core.Logs;
 using Armali.Horizon.Segaris.Components;
 using Armali.Horizon.Segaris.Services;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,9 @@ public class Program
     public static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
+        
+        // Logging centralizado con Serilog + Seq
+        builder.Host.UseHorizonLogging();
 
         // Add services to the container.
         builder.Services.AddRazorComponents()
@@ -18,7 +22,7 @@ public class Program
         builder.Services.AddScoped<HorizonSessionService>();
         
         builder.Services.AddDbContextFactory<SegarisDbContext>(options =>
-            options.UseSqlite(builder.Configuration.GetConnectionString("Segaris")));
+            options.UseSqlite(builder.Configuration.GetSection("Horizon")["ConnectionStrings:Segaris"]));
         builder.Services.AddScoped<CapexService>();
         builder.Services.AddScoped<OpexService>();
         builder.Services.AddScoped<InventoryService>();

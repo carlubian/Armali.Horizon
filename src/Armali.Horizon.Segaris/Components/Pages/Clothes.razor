@@ -19,6 +19,7 @@
     <HorizonTable Items="@Entities">
         <Header>
             <HorizonCellHeader TItem="ClothesEntity" Name="Name" />
+            <HorizonCellHeader TItem="ClothesEntity" Name="Colors" />
             <HorizonCellHeader TItem="ClothesEntity" Name="Purchase Date" />
             <HorizonCellHeader TItem="ClothesEntity" Filterable="true" 
                                ValueSelector="@(e => Index(Categories, e.CategoryId)?.Name ?? string.Empty)" Name="Category" />
@@ -31,11 +32,15 @@
         <RowTemplate>
             <HorizonCellTwoLine Title="@context.Name" Subtitle="@context.GarmentCode" Center="false" 
                                 Icon="@PrivacyIcon(context.IsPrivate, context.Creator, CurrentUser)" IconColor="@PrivacyColor(context.IsPrivate, context.Creator, CurrentUser)" />
+            <ClothesCellColors Assignments="@(ColorAssignments.GetValueOrDefault(context.Id))"
+                               Colors="AvailableColors" Styles="ColorStyles" />
             <HorizonCellDateTime Content="@context.Date" />
             <HorizonCellText Content="@Index(Categories, context.CategoryId)?.Name" />
             <HorizonCellStatus Content="@Index(Statuses, context.StatusId)" />
             <HorizonCellText Content="@Index(WashTypes, context.WashTypeId)?.Name" />
+            
             <HorizonCellButtons>
+                <HorizonMiniButton Color="hz-sol" Icon="fa-palette" OnClick="@(() => PopupColorAssignments(context))"/>
                 <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupEdit(context))"/>
                 <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupDelete(context))"/>
             </HorizonCellButtons>
@@ -116,10 +121,96 @@
     </HorizonPopup>
 }
 
+@if (ShowColorPopup)
+{
+    <HorizonPopup @bind-Visible="ShowColorPopup">
+        <HorizonDialog Title="@($"Colors — {TargetEntity!.Name}")">
+            <Content>
+                <HorizonTable Items="@SubEntities">
+                    <Header>
+                        <HorizonCellHeader TItem="ClothesColorAssignment" Name="Color" />
+                        <HorizonCellHeader TItem="ClothesColorAssignment" Name="Style" />
+                        <HorizonCellHeader TItem="ClothesColorAssignment" Name="Actions" />
+                    </Header>
+                    <RowTemplate Context="assignment">
+                        <td class="px-2 text-hz-arendelle font-hz-text">
+                            <div class="flex items-center justify-center gap-2">
+                                <span style="@($"background-color: {Index(AvailableColors, assignment.ColorId)?.Reference ?? "#808080"}; width: 16px; height: 16px; display: inline-block; border-radius: 2px; border: 1px solid rgba(255,255,255,0.2);")">&nbsp;</span>
+                                @(Index(AvailableColors, assignment.ColorId)?.Name ?? "—")
+                            </div>
+                        </td>
+                        <HorizonCellText Content="@Index(ColorStyles, assignment.StyleId)?.Name" />
+                        <HorizonCellButtons>
+                            <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupColorEdit(assignment))"/>
+                            <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupColorDelete(assignment))"/>
+                        </HorizonCellButtons>
+                    </RowTemplate>
+                </HorizonTable>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-plus" Caption="Add Color" OnClick="@(() => PopupColorCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowColorEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowColorEditPopup" OnCanceled="ColorRefresh">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New Color" : "Edit Color")">
+            <Content>
+                <HorizonForm Model="TargetAssignment" Columns="2">
+                    <HorizonFormCell Label="Color">
+                        <HorizonCombobox Items="AvailableColors.Select(c => c.Id)" @bind-Value="@TargetAssignment!.ColorId">
+                            <ItemTemplate Context="index">
+                                <div class="flex items-center gap-2">
+                                    <span style="@($"background-color: {Index(AvailableColors, index)?.Reference ?? "#808080"}; width: 16px; height: 16px; display: inline-block; border-radius: 2px; border: 1px solid rgba(255,255,255,0.2);")">&nbsp;</span>
+                                    @Index(AvailableColors, index)?.Name
+                                </div>
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Style">
+                        <HorizonCombobox Items="ColorStyles.Select(s => s.Id)" @bind-Value="@TargetAssignment!.StyleId">
+                            <ItemTemplate Context="index">
+                                @Index(ColorStyles, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                </HorizonForm>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => ColorDoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => ColorDoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowColorDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowColorDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this color assignment?" />
+                <HorizonLabelText Text="@(Index(AvailableColors, TargetAssignment!.ColorId)?.Name ?? "—")" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => ColorDoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => ColorDoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
 @code {
     
     private bool ShowEditPopup;
     private bool ShowDeletePopup;
+    private bool ShowColorPopup;
+    private bool ShowColorEditPopup;
+    private bool ShowColorDeletePopup;
     private PopupIntent Intent = PopupIntent.None;
     private string CurrentUser = string.Empty;
 
@@ -127,8 +218,17 @@
     private IEnumerable<ClothesCategory> Categories = [];
     private IEnumerable<ClothesWashType> WashTypes = [];
     private IEnumerable<ClothesStatus> Statuses = [];
+    private IEnumerable<ClothesColor> AvailableColors = [];
+    private IEnumerable<ClothesColorStyle> ColorStyles = [];
     private IEnumerable<ClothesEntity> Entities = [];
     private ClothesEntity? TargetEntity;
+    
+    // Color assignments — diccionario GarmentId → lista, para la tabla principal
+    private Dictionary<int, List<ClothesColorAssignment>> ColorAssignments = new();
+    
+    // Sub-entidad de colores (popup)
+    private IEnumerable<ClothesColorAssignment> SubEntities = [];
+    private ClothesColorAssignment? TargetAssignment;
 
     protected override async Task OnInitializedAsync()
     {
@@ -136,6 +236,8 @@
         Categories = await ClothesService.GetClothesCategories();
         Statuses = await ClothesService.GetClothesStatuses();
         WashTypes = await ClothesService.GetClothesWashTypes();
+        AvailableColors = await ClothesService.GetClothesColors();
+        ColorStyles = await ClothesService.GetClothesColorStyles();
     }
 
     private async Task LoadData()
@@ -147,6 +249,7 @@
     {
         // Refresh list
         Entities = await ClothesService.GetClothesEntities(CurrentUser);
+        ColorAssignments = await ClothesService.GetAllColorAssignments();
     }
     
     private void NavigateClothes()
@@ -158,6 +261,8 @@
     {
         Nav.NavigateTo("/clothes/code");
     }
+
+    // ── Garment CRUD ────────────────────────────────────────
 
     private void PopupCreate()
     {
@@ -215,5 +320,73 @@
         TargetEntity = null;
         await Refresh();
         ShowDeletePopup = false;
+    }
+    
+    // ── Color assignment sub-entity CRUD ────────────────────
+
+    private async Task ColorRefresh()
+    {
+        SubEntities = await ClothesService.GetColorAssignments(TargetEntity!.Id);
+    }
+
+    private async Task PopupColorAssignments(ClothesEntity entity)
+    {
+        TargetEntity = entity;
+        await ColorRefresh();
+        ShowColorPopup = true;
+    }
+    
+    private void PopupColorCreate()
+    {
+        TargetAssignment = new ClothesColorAssignment
+        {
+            GarmentId = TargetEntity!.Id
+        };
+        Intent = PopupIntent.Create;
+        ShowColorEditPopup = true;
+    }
+    
+    private void PopupColorEdit(ClothesColorAssignment assignment)
+    {
+        TargetAssignment = assignment;
+        Intent = PopupIntent.Edit;
+        ShowColorEditPopup = true;
+    }
+    
+    private void PopupColorDelete(ClothesColorAssignment assignment)
+    {
+        TargetAssignment = assignment;
+        ShowColorDeletePopup = true;
+    }
+    
+    private async Task ColorDoCreate()
+    {
+        if (Intent is PopupIntent.Create)
+            await ClothesService.AddColorAssignment(TargetAssignment!);
+        else
+            await ClothesService.UpdateColorAssignment(TargetAssignment!);
+        await ColorRefresh();
+        ShowColorEditPopup = false;
+    }
+    
+    private async Task ColorDoDelete()
+    {
+        await ClothesService.DeleteColorAssignment(TargetAssignment!.Id);
+        await ColorRefresh();
+        ShowColorDeletePopup = false;
+    }
+
+    private async Task ColorDoNotCreate()
+    {
+        TargetAssignment = null;
+        await ColorRefresh();
+        ShowColorEditPopup = false;
+    }
+    
+    private async Task ColorDoNotDelete()
+    {
+        TargetAssignment = null;
+        await ColorRefresh();
+        ShowColorDeletePopup = false;
     }
 }

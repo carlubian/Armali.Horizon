@@ -5,6 +5,7 @@ EXPOSE 5122
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
+ARG APP_VERSION=0.0.0
 
 # Descargar el CLI standalone de Tailwind CSS para Linux
 ADD https://github.com/tailwindlabs/tailwindcss/releases/latest/download/tailwindcss-linux-x64 /usr/local/bin/tailwindcss
@@ -25,11 +26,12 @@ RUN tailwindcss -i ./src/Armali.Horizon.Blazor/wwwroot/app.css -o ./src/Armali.H
 RUN tailwindcss -i ./src/Armali.Horizon.Segaris/wwwroot/app.css -o ./src/Armali.Horizon.Segaris/wwwroot/tailwind.css --minify
 
 WORKDIR "/build/src/Armali.Horizon.Segaris"
-RUN dotnet build "./Armali.Horizon.Segaris.csproj" -c $BUILD_CONFIGURATION -o /app/build /p:SkipTailwindBuild=true
+RUN dotnet build "./Armali.Horizon.Segaris.csproj" -c $BUILD_CONFIGURATION -o /app/build /p:SkipTailwindBuild=true /p:Version=$APP_VERSION
 
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./Armali.Horizon.Segaris.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false /p:SkipTailwindBuild=true
+ARG APP_VERSION=0.0.0
+RUN dotnet publish "./Armali.Horizon.Segaris.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false /p:SkipTailwindBuild=true /p:Version=$APP_VERSION
 
 FROM base AS final
 WORKDIR /app

@@ -4,7 +4,7 @@ using Armali.Horizon.Blazor;
 
 namespace Armali.Horizon.Autoconfig.Model;
 
-public class AutoconfigNode : Nameable
+public class AutoconfigNode : Nameable, Identifiable
 {
     public int Id { get; set; }
     
@@ -36,6 +36,12 @@ public class AutoconfigApp : Nameable
     public AutoconfigNode? Node { get; set; }
 }
 
+public class AppStats
+{
+    public int VersionCount { get; set; }
+    public double TotalKbSize { get; set; }
+}
+
 public class AutoconfigVersion : Nameable
 {
     public int Id { get; set; }
@@ -46,6 +52,9 @@ public class AutoconfigVersion : Nameable
     public int Minor { get; set; }
     [Required]
     public int Patch { get; set; }
+    
+    [Required]
+    public DateTime Date { get; set; }
 
     public string Name => $"{Major}.{Minor}.{Patch}";
 

@@ -6,7 +6,7 @@ namespace Armali.Horizon.IO;
 
 public static class HorizonEventExtensions
 {
-    public static IHostBuilder UseHorizonLogging(this IHostBuilder builder)
+    public static IHostBuilder UseHorizonEvents(this IHostBuilder builder)
     {
         return builder.ConfigureServices((context, services) =>
         {

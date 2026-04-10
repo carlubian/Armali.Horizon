@@ -58,6 +58,33 @@ public class ClothesServiceTests
         washTypes.ShouldContain(w => w.Name == "Wash Alone");
     }
 
+    // ── GetClothesColors ─────────────────────────────────────
+
+    [TestMethod]
+    public async Task GetClothesColors_ReturnsSeedData()
+    {
+        var colors = await _service.GetClothesColors();
+
+        colors.Count.ShouldBe(36);
+        colors.ShouldContain(c => c.Name == "Auburn" && c.Reference == "#D22C21");
+        colors.ShouldContain(c => c.Name == "Shamrock" && c.Reference == "#009E60");
+        colors.ShouldContain(c => c.Name == "Cobalt" && c.Reference == "#333C87");
+        colors.ShouldContain(c => c.Name == "Sienna" && c.Reference == "#C58A3E");
+    }
+
+    // ── GetClothesColorStyles ────────────────────────────────
+
+    [TestMethod]
+    public async Task GetClothesColorStyles_ReturnsSeedData()
+    {
+        var styles = await _service.GetClothesColorStyles();
+
+        styles.Count.ShouldBe(3);
+        styles.ShouldContain(s => s.Name == "Primary");
+        styles.ShouldContain(s => s.Name == "Secondary");
+        styles.ShouldContain(s => s.Name == "Details");
+    }
+
     // ── AddClothes + GetClothesEntities ──────────────────────
 
     [TestMethod]
@@ -187,5 +214,159 @@ public class ClothesServiceTests
         // No debe lanzar excepción al intentar eliminar un ID que no existe
         await Should.NotThrowAsync(() => _service.DeleteClothes(9999));
     }
-}
 
+    // ── Color assignment CRUD ────────────────────────────────
+
+    [TestMethod]
+    public async Task AddColorAssignment_AndRetrieve_ReturnsAssignment()
+    {
+        // Crear prenda primero
+        var garment = new ClothesEntity
+        {
+            Name = "Garment Colors",
+            Date = DateTime.Now,
+            CategoryId = 1,
+            StatusId = 1,
+            WashTypeId = 1,
+            Creator = "user1"
+        };
+        await _service.AddClothes(garment);
+
+        var assignment = new ClothesColorAssignment
+        {
+            GarmentId = garment.Id,
+            ColorId = 1,  // Black
+            StyleId = 1   // Primary
+        };
+        await _service.AddColorAssignment(assignment);
+
+        var assignments = await _service.GetColorAssignments(garment.Id);
+        assignments.Count.ShouldBe(1);
+        assignments[0].ColorId.ShouldBe(1);
+        assignments[0].StyleId.ShouldBe(1);
+    }
+
+    [TestMethod]
+    public async Task GetColorAssignments_OrdersByStyleId()
+    {
+        var garment = new ClothesEntity
+        {
+            Name = "Multi Color",
+            Date = DateTime.Now,
+            CategoryId = 1,
+            StatusId = 1,
+            WashTypeId = 1,
+            Creator = "user1"
+        };
+        await _service.AddClothes(garment);
+
+        // Insertar en orden inverso (Details antes que Primary)
+        await _service.AddColorAssignment(new ClothesColorAssignment
+        {
+            GarmentId = garment.Id, ColorId = 9, StyleId = 3  // Details
+        });
+        await _service.AddColorAssignment(new ClothesColorAssignment
+        {
+            GarmentId = garment.Id, ColorId = 1, StyleId = 1  // Primary
+        });
+        await _service.AddColorAssignment(new ClothesColorAssignment
+        {
+            GarmentId = garment.Id, ColorId = 2, StyleId = 2  // Secondary
+        });
+
+        var assignments = await _service.GetColorAssignments(garment.Id);
+        assignments.Count.ShouldBe(3);
+        assignments[0].StyleId.ShouldBe(1);
+        assignments[1].StyleId.ShouldBe(2);
+        assignments[2].StyleId.ShouldBe(3);
+    }
+
+    [TestMethod]
+    public async Task GetAllColorAssignments_GroupsByGarmentId()
+    {
+        var garment1 = new ClothesEntity
+        {
+            Name = "Garment A", Date = DateTime.Now,
+            CategoryId = 1, StatusId = 1, WashTypeId = 1, Creator = "user1"
+        };
+        var garment2 = new ClothesEntity
+        {
+            Name = "Garment B", Date = DateTime.Now,
+            CategoryId = 1, StatusId = 1, WashTypeId = 1, Creator = "user1"
+        };
+        await _service.AddClothes(garment1);
+        await _service.AddClothes(garment2);
+
+        await _service.AddColorAssignment(new ClothesColorAssignment
+        {
+            GarmentId = garment1.Id, ColorId = 1, StyleId = 1
+        });
+        await _service.AddColorAssignment(new ClothesColorAssignment
+        {
+            GarmentId = garment1.Id, ColorId = 2, StyleId = 2
+        });
+        await _service.AddColorAssignment(new ClothesColorAssignment
+        {
+            GarmentId = garment2.Id, ColorId = 3, StyleId = 1
+        });
+
+        var dict = await _service.GetAllColorAssignments();
+        dict.Keys.Count.ShouldBe(2);
+        dict[garment1.Id].Count.ShouldBe(2);
+        dict[garment2.Id].Count.ShouldBe(1);
+    }
+
+    [TestMethod]
+    public async Task UpdateColorAssignment_ModifiesAssignment()
+    {
+        var garment = new ClothesEntity
+        {
+            Name = "Update Color", Date = DateTime.Now,
+            CategoryId = 1, StatusId = 1, WashTypeId = 1, Creator = "user1"
+        };
+        await _service.AddClothes(garment);
+
+        var assignment = new ClothesColorAssignment
+        {
+            GarmentId = garment.Id, ColorId = 1, StyleId = 1
+        };
+        await _service.AddColorAssignment(assignment);
+
+        assignment.ColorId = 7;  // Cambiar de Black a Blue
+        assignment.StyleId = 2;  // Cambiar de Primary a Secondary
+        await _service.UpdateColorAssignment(assignment);
+
+        var assignments = await _service.GetColorAssignments(garment.Id);
+        assignments.Count.ShouldBe(1);
+        assignments[0].ColorId.ShouldBe(7);
+        assignments[0].StyleId.ShouldBe(2);
+    }
+
+    [TestMethod]
+    public async Task DeleteColorAssignment_RemovesAssignment()
+    {
+        var garment = new ClothesEntity
+        {
+            Name = "Delete Color", Date = DateTime.Now,
+            CategoryId = 1, StatusId = 1, WashTypeId = 1, Creator = "user1"
+        };
+        await _service.AddClothes(garment);
+
+        var assignment = new ClothesColorAssignment
+        {
+            GarmentId = garment.Id, ColorId = 1, StyleId = 1
+        };
+        await _service.AddColorAssignment(assignment);
+
+        await _service.DeleteColorAssignment(assignment.Id);
+
+        var assignments = await _service.GetColorAssignments(garment.Id);
+        assignments.ShouldBeEmpty();
+    }
+
+    [TestMethod]
+    public async Task DeleteColorAssignment_NonExistentId_DoesNotThrow()
+    {
+        await Should.NotThrowAsync(() => _service.DeleteColorAssignment(9999));
+    }
+}

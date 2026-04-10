@@ -3,6 +3,7 @@ using System;
 using Armali.Horizon.Segaris;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Armali.Horizon.Segaris.Migrations
 {
     [DbContext(typeof(SegarisDbContext))]
-    partial class SegarisDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260410113734_ClothesColorEntities")]
+    partial class ClothesColorEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.5");

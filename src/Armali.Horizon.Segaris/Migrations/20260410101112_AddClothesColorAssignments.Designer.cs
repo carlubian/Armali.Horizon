@@ -3,6 +3,7 @@ using System;
 using Armali.Horizon.Segaris;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Armali.Horizon.Segaris.Migrations
 {
     [DbContext(typeof(SegarisDbContext))]
-    partial class SegarisDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260410101112_AddClothesColorAssignments")]
+    partial class AddClothesColorAssignments
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
@@ -541,218 +544,122 @@ namespace Armali.Horizon.Segaris.Migrations
                         new
                         {
                             Id = 1,
-                            Name = "Maroon",
-                            Reference = "#800000"
+                            Name = "Black",
+                            Reference = "#000000"
                         },
                         new
                         {
                             Id = 2,
-                            Name = "Auburn",
-                            Reference = "#D22C21"
+                            Name = "White",
+                            Reference = "#FFFFFF"
                         },
                         new
                         {
                             Id = 3,
-                            Name = "Coral",
-                            Reference = "#E51D2E"
+                            Name = "Gray",
+                            Reference = "#808080"
                         },
                         new
                         {
                             Id = 4,
-                            Name = "Vermilion",
-                            Reference = "#E62E00"
+                            Name = "Dark Gray",
+                            Reference = "#404040"
                         },
                         new
                         {
                             Id = 5,
-                            Name = "Indian",
-                            Reference = "#FF8000"
+                            Name = "Light Gray",
+                            Reference = "#C0C0C0"
                         },
                         new
                         {
                             Id = 6,
-                            Name = "Flame",
-                            Reference = "#F98F1D"
+                            Name = "Navy",
+                            Reference = "#000080"
                         },
                         new
                         {
                             Id = 7,
-                            Name = "Amber",
-                            Reference = "#FFBF00"
+                            Name = "Blue",
+                            Reference = "#0000FF"
                         },
                         new
                         {
                             Id = 8,
-                            Name = "Hansa",
-                            Reference = "#FFDF00"
+                            Name = "Light Blue",
+                            Reference = "#87CEEB"
                         },
                         new
                         {
                             Id = 9,
-                            Name = "Lime",
-                            Reference = "#D9E542"
+                            Name = "Red",
+                            Reference = "#FF0000"
                         },
                         new
                         {
                             Id = 10,
-                            Name = "Chartreuse",
-                            Reference = "#75B313"
+                            Name = "Dark Red",
+                            Reference = "#8B0000"
                         },
                         new
                         {
                             Id = 11,
-                            Name = "Shamrock",
-                            Reference = "#009E60"
+                            Name = "Green",
+                            Reference = "#008000"
                         },
                         new
                         {
                             Id = 12,
-                            Name = "Viridian",
-                            Reference = "#007F5C"
+                            Name = "Olive",
+                            Reference = "#808000"
                         },
                         new
                         {
                             Id = 13,
-                            Name = "Emerald",
-                            Reference = "#3FD8AA"
+                            Name = "Yellow",
+                            Reference = "#FFD700"
                         },
                         new
                         {
                             Id = 14,
-                            Name = "Verdigris",
-                            Reference = "#43B3AE"
+                            Name = "Orange",
+                            Reference = "#FF8C00"
                         },
                         new
                         {
                             Id = 15,
-                            Name = "Munsell",
-                            Reference = "#367588"
+                            Name = "Brown",
+                            Reference = "#8B4513"
                         },
                         new
                         {
                             Id = 16,
-                            Name = "Sky",
-                            Reference = "#0CB7F2"
+                            Name = "Beige",
+                            Reference = "#F5F5DC"
                         },
                         new
                         {
                             Id = 17,
-                            Name = "Cerulean",
-                            Reference = "#0087D1"
+                            Name = "Pink",
+                            Reference = "#FF69B4"
                         },
                         new
                         {
                             Id = 18,
-                            Name = "Indigo",
-                            Reference = "#0A3F7A"
+                            Name = "Purple",
+                            Reference = "#800080"
                         },
                         new
                         {
                             Id = 19,
-                            Name = "Cobalt",
-                            Reference = "#333C87"
+                            Name = "Teal",
+                            Reference = "#008080"
                         },
                         new
                         {
                             Id = 20,
-                            Name = "Violet",
-                            Reference = "#4C2882"
-                        },
-                        new
-                        {
-                            Id = 21,
-                            Name = "Iris",
-                            Reference = "#7F68A5"
-                        },
-                        new
-                        {
-                            Id = 22,
-                            Name = "Mauve",
-                            Reference = "#E0B0FF"
-                        },
-                        new
-                        {
-                            Id = 23,
-                            Name = "Orcein",
-                            Reference = "#C20073"
-                        },
-                        new
-                        {
-                            Id = 24,
-                            Name = "Salmon",
-                            Reference = "#EB6362"
-                        },
-                        new
-                        {
-                            Id = 25,
-                            Name = "Sandy",
-                            Reference = "#ECE2C6"
-                        },
-                        new
-                        {
-                            Id = 26,
-                            Name = "Sienna",
-                            Reference = "#C58A3E"
-                        },
-                        new
-                        {
-                            Id = 27,
-                            Name = "Cinnamon",
-                            Reference = "#8D4925"
-                        },
-                        new
-                        {
-                            Id = 28,
-                            Name = "Umber",
-                            Reference = "#955F20"
-                        },
-                        new
-                        {
-                            Id = 29,
-                            Name = "Chestnut",
-                            Reference = "#5D432C"
-                        },
-                        new
-                        {
-                            Id = 30,
-                            Name = "Sepia",
-                            Reference = "#663B2A"
-                        },
-                        new
-                        {
-                            Id = 31,
-                            Name = "Artemisia",
-                            Reference = "#E0E5FF"
-                        },
-                        new
-                        {
-                            Id = 32,
-                            Name = "Ash",
-                            Reference = "#CDCDCD"
-                        },
-                        new
-                        {
-                            Id = 33,
-                            Name = "Steel",
-                            Reference = "#8B8589"
-                        },
-                        new
-                        {
-                            Id = 34,
-                            Name = "Slate",
-                            Reference = "#5D6770"
-                        },
-                        new
-                        {
-                            Id = 35,
-                            Name = "Anthracite",
-                            Reference = "#383E42"
-                        },
-                        new
-                        {
-                            Id = 36,
-                            Name = "Cordovan",
-                            Reference = "#3B2A21"
+                            Name = "Khaki",
+                            Reference = "#BDB76B"
                         });
                 });
 
