@@ -3,6 +3,7 @@ using System;
 using Armali.Horizon.Autoconfig;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Armali.Horizon.Autoconfig.Migrations
 {
     [DbContext(typeof(AutoconfigDbContext))]
-    partial class AutoconfigDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260405175301_AppsModule")]
+    partial class AppsModule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
