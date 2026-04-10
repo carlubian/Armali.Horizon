@@ -21,7 +21,8 @@
 @code
 {
     private string CurrentUser { get; set; } = "Unknown";
-    private const string Version = "1.0.0";
+    private static readonly string Version = System.Reflection.Assembly
+        .GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "0.0.0";
     
     private string PageTitle
     {
