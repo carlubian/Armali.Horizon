@@ -65,11 +65,11 @@ public class ClothesServiceTests
     {
         var colors = await _service.GetClothesColors();
 
-        colors.Count.ShouldBe(20);
-        colors.ShouldContain(c => c.Name == "Black" && c.Reference == "#000000");
-        colors.ShouldContain(c => c.Name == "White" && c.Reference == "#FFFFFF");
-        colors.ShouldContain(c => c.Name == "Navy" && c.Reference == "#000080");
-        colors.ShouldContain(c => c.Name == "Teal" && c.Reference == "#008080");
+        colors.Count.ShouldBe(36);
+        colors.ShouldContain(c => c.Name == "Auburn" && c.Reference == "#D22C21");
+        colors.ShouldContain(c => c.Name == "Shamrock" && c.Reference == "#009E60");
+        colors.ShouldContain(c => c.Name == "Cobalt" && c.Reference == "#333C87");
+        colors.ShouldContain(c => c.Name == "Sienna" && c.Reference == "#C58A3E");
     }
 
     // ── GetClothesColorStyles ────────────────────────────────
