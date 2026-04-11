@@ -501,5 +501,185 @@ public class ProjectServiceTests
         subs.Count.ShouldBe(1);
         subs[0].File.ShouldBe("abc123.pdf");
     }
+
+    // ── ProjectRiskCategory seed data ───────────────────────
+
+    [TestMethod]
+    public async Task GetProjectRiskCategories_ReturnsSeedData()
+    {
+        var categories = await _service.GetProjectRiskCategories();
+
+        categories.Count.ShouldBe(8);
+        categories.ShouldContain(c => c.Name == "Technical");
+        categories.ShouldContain(c => c.Name == "Financial");
+        categories.ShouldContain(c => c.Name == "Schedule");
+        categories.ShouldContain(c => c.Name == "Operational");
+    }
+
+    // ── ProjectRiskElement CRUD ─────────────────────────────
+
+    [TestMethod]
+    public async Task AddProjectRiskElement_AndRetrieve_ReturnsElement()
+    {
+        var parent = await CreateParentEntity();
+
+        var element = new ProjectRiskElement
+        {
+            Name = "Server outage",
+            CategoryId = 1,
+            Probability = 5,
+            Severity = 8,
+            Mitigation = 3,
+            ProjectId = parent.Id
+        };
+
+        await _service.AddProjectRiskElement(element);
+
+        var elements = await _service.GetProjectRiskElements(parent.Id);
+        elements.Count.ShouldBe(1);
+        elements[0].Name.ShouldBe("Server outage");
+        elements[0].CategoryId.ShouldBe(1);
+        elements[0].Probability.ShouldBe(5);
+        elements[0].Severity.ShouldBe(8);
+        elements[0].Mitigation.ShouldBe(3);
+        elements[0].ProjectId.ShouldBe(parent.Id);
+    }
+
+    [TestMethod]
+    public async Task ProjectRiskElement_Score_IsCalculatedCorrectly()
+    {
+        var element = new ProjectRiskElement
+        {
+            Probability = 5,
+            Severity = 8,
+            Mitigation = 3
+        };
+
+        element.Score.ShouldBe(120);
+    }
+
+    [TestMethod]
+    public async Task ProjectRiskElement_Score_BelowThreshold()
+    {
+        var element = new ProjectRiskElement
+        {
+            Probability = 2,
+            Severity = 3,
+            Mitigation = 4
+        };
+
+        element.Score.ShouldBe(24);
+        (element.Score < 100).ShouldBeTrue();
+    }
+
+    [TestMethod]
+    public async Task GetProjectRiskElements_FiltersOnlyByParentProject()
+    {
+        var parent1 = await CreateParentEntity("Proyecto A");
+
+        var parent2 = new ProjectEntity
+        {
+            Name = "Proyecto B",
+            Code = "000002",
+            ProgramId = 2,
+            AxisId = 6,
+            StatusId = 1,
+            IsPrivate = false,
+            Creator = "user1"
+        };
+        await _service.AddProject(parent2);
+
+        await _service.AddProjectRiskElement(new ProjectRiskElement
+        {
+            Name = "Riesgo de A",
+            CategoryId = 1,
+            Probability = 5,
+            Severity = 5,
+            Mitigation = 5,
+            ProjectId = parent1.Id
+        });
+
+        await _service.AddProjectRiskElement(new ProjectRiskElement
+        {
+            Name = "Riesgo de B",
+            CategoryId = 2,
+            Probability = 3,
+            Severity = 3,
+            Mitigation = 3,
+            ProjectId = parent2.Id
+        });
+
+        var riskParent1 = await _service.GetProjectRiskElements(parent1.Id);
+        riskParent1.Count.ShouldBe(1);
+        riskParent1[0].Name.ShouldBe("Riesgo de A");
+
+        var riskParent2 = await _service.GetProjectRiskElements(parent2.Id);
+        riskParent2.Count.ShouldBe(1);
+        riskParent2[0].Name.ShouldBe("Riesgo de B");
+    }
+
+    [TestMethod]
+    public async Task UpdateProjectRiskElement_ModifiesElement()
+    {
+        var parent = await CreateParentEntity();
+
+        var element = new ProjectRiskElement
+        {
+            Name = "Original risk",
+            CategoryId = 1,
+            Probability = 2,
+            Severity = 3,
+            Mitigation = 4,
+            ProjectId = parent.Id
+        };
+        await _service.AddProjectRiskElement(element);
+
+        // Actualizar
+        element.Name = "Modified risk";
+        element.CategoryId = 3;
+        element.Probability = 7;
+        element.Severity = 8;
+        element.Mitigation = 9;
+        await _service.UpdateProjectRiskElement(element);
+
+        var elements = await _service.GetProjectRiskElements(parent.Id);
+        elements.Count.ShouldBe(1);
+        elements[0].Name.ShouldBe("Modified risk");
+        elements[0].CategoryId.ShouldBe(3);
+        elements[0].Probability.ShouldBe(7);
+        elements[0].Severity.ShouldBe(8);
+        elements[0].Mitigation.ShouldBe(9);
+    }
+
+    [TestMethod]
+    public async Task DeleteProjectRiskElement_RemovesElement()
+    {
+        var parent = await CreateParentEntity();
+
+        var element = new ProjectRiskElement
+        {
+            Name = "Para eliminar",
+            CategoryId = 1,
+            Probability = 1,
+            Severity = 1,
+            Mitigation = 1,
+            ProjectId = parent.Id
+        };
+        await _service.AddProjectRiskElement(element);
+
+        var before = await _service.GetProjectRiskElements(parent.Id);
+        before.Count.ShouldBe(1);
+
+        await _service.DeleteProjectRiskElement(element.Id);
+
+        var after = await _service.GetProjectRiskElements(parent.Id);
+        after.ShouldBeEmpty();
+    }
+
+    [TestMethod]
+    public async Task DeleteProjectRiskElement_NonExistentId_DoesNotThrow()
+    {
+        await Should.NotThrowAsync(() => _service.DeleteProjectRiskElement(9999));
+    }
 }
 

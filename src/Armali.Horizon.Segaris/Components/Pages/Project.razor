@@ -4,6 +4,7 @@
 
 @inject ProjectService ProjectService
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="LoadData" />
 <HorizonLayout AppName="Segaris" PageName="Projects">
@@ -16,7 +17,10 @@
         }
     </Sidebar>
     <SidebarBottom>
-        
+        @if (TargetEntity != null)
+        {
+            <HorizonHeroButton Color="hz-apollo" Icon="fa-triangle-exclamation" Caption="Risk Analysis" OnClick="@(() => RiskFor(TargetEntity))" />
+        }
     </SidebarBottom>
     <Body>
     
@@ -64,18 +68,31 @@
         
         <!-- Right panel: Details of selected project (2/3 width) -->
         <div class="w-2/3 bg-hz-styx rounded-xl p-4 overflow-hidden">
-            <HorizonLabelTitle Text="Project Details" />
+            
             @if (TargetEntity != null)
             {
-                <div class="text-hz-arendelle font-hz-text">
-                    <p><span class="font-bold">Name:</span> @TargetEntity.Name</p>
-                    <p><span class="font-bold">Name:</span> @TargetEntity.Code</p>
-                    <p><span class="font-bold">Program:</span> @TargetEntity.Program?.Name</p>
-                    <p><span class="font-bold">Axis:</span> @TargetEntity.Axis?.Name</p>
-                    <p><span class="font-bold">Status:</span> @TargetEntity.Status?.Name</p>
-                    <p><span class="font-bold">Private:</span> @(TargetEntity.IsPrivate ? "Yes" : "No")</p>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <HorizonLabelTitle Text="Project Details" />
+                        <div class="text-hz-arendelle font-hz-text">
+                            <p><span class="font-bold">Code:</span> @TargetEntity.Program?.Name@TargetEntity.Axis?.Name-@TargetEntity.Code</p>
+                            <p><span class="font-bold">Name:</span> @TargetEntity.Name</p>
+                            <p><span class="font-bold">Status:</span> @TargetEntity.Status?.Name</p>
+                            <p><span class="font-bold">Private:</span> @(TargetEntity.IsPrivate ? "Yes" : "No")</p>
+                        </div>
+                    </div>
+                    <div>
+                        <HorizonLabelTitle Text="Risk Assessment" />
+                        <div class="text-hz-arendelle font-hz-text">
+                            <p><span class="font-bold">Total risks:</span> @RiskElements.Count() </p>
+                            <p><span class="font-bold">High risks:</span> @RiskElements.Count(r => r.Score >= 100) </p>
+                            <p><span class="font-bold">Lead category:</span> @GetLeadRiskCategory() </p>
+                        </div>
+                    </div>
                 </div>
                 
+                <br />
+                <HorizonLabelTitle Text="Project Files" />
                 <HorizonTable Items="@SubEntities">
                     <Header>
                         <HorizonCellHeader TItem="ProjectSubEntity" Name="Name" />
@@ -268,6 +285,10 @@
     private ProjectSubEntity? TargetSubEntity;
     private IBrowserFile? SelectedFile;
     
+    // Risk Analysis summary
+    private IEnumerable<ProjectRiskCategory> RiskCategories = [];
+    private IEnumerable<ProjectRiskElement> RiskElements = [];
+    
     // Tree view state
     private HashSet<string> ExpandedNodes = new();
     
@@ -278,6 +299,7 @@
         Statuses = await ProjectService.GetProjectStatuses();
         AllAxis = await ProjectService.GetAllProjectAxis();
         SubEntityCategories = await ProjectService.GetProjectSubEntityCategories();
+        RiskCategories = await ProjectService.GetProjectRiskCategories();
     }
 
     private async Task LoadData()
@@ -395,6 +417,7 @@
     {
         TargetEntity = project;
         await SubEntityRefresh();
+        RiskElements = await ProjectService.GetProjectRiskElements(project.Id);
     }
     
     private async Task SubEntityRefresh()
@@ -484,5 +507,24 @@
         TargetSubEntity = null;
         await SubEntityRefresh();
         ShowSubEntityDeletePopup = false;
+    }
+
+    private void RiskFor(ProjectEntity target)
+    {
+        Nav.NavigateTo($"/projects/risk/{target.Id}");
+    }
+    
+    /// Devuelve el nombre de la categoría de riesgo más frecuente, o "—" si no hay riesgos.
+    private string GetLeadRiskCategory()
+    {
+        if (!RiskElements.Any()) return "—";
+        
+        var LeadCategoryId = RiskElements
+            .GroupBy(r => r.CategoryId)
+            .OrderByDescending(g => g.Count())
+            .First()
+            .Key;
+        
+        return Index(RiskCategories, LeadCategoryId)?.Name ?? "—";
     }
 }
