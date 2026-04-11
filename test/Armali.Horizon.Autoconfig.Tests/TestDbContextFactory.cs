@@ -8,7 +8,7 @@ namespace Armali.Horizon.Autoconfig.Tests;
 /// La conexión se mantiene abierta durante toda la vida del helper
 /// para que la base de datos no se destruya entre operaciones.
 /// </summary>
-internal class TestDbContextFactory : IDbContextFactory<AutoconfigDbContext>, IDisposable
+public class TestDbContextFactory : IDbContextFactory<AutoconfigDbContext>, IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<AutoconfigDbContext> _options;
