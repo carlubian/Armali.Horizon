@@ -173,4 +173,48 @@ public class ProjectService
     {
         await DatalakeService.DeleteProjectFileAsync(fileName, p.Program!.Name, p.Axis!.Name, p.Code);
     }
+    
+    // ── Risk Analysis ────────────────────────────────────────
+    
+    public async Task<List<ProjectRiskCategory>> GetProjectRiskCategories()
+    {
+        await using var context = Factory.CreateDbContext();
+        return await context.ProjectRiskCategories
+            .AsNoTracking()
+            .ToListAsync();
+    }
+    
+    public async Task<List<ProjectRiskElement>> GetProjectRiskElements(int projectId)
+    {
+        await using var context = Factory.CreateDbContext();
+        return await context.ProjectRiskElements
+            .Where(e => e.ProjectId == projectId)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+    
+    public async Task AddProjectRiskElement(ProjectRiskElement element)
+    {
+        await using var context = Factory.CreateDbContext();
+        context.ProjectRiskElements.Add(element);
+        await context.SaveChangesAsync();
+    }
+    
+    public async Task UpdateProjectRiskElement(ProjectRiskElement element)
+    {
+        await using var context = Factory.CreateDbContext();
+        context.ProjectRiskElements.Update(element);
+        await context.SaveChangesAsync();
+    }
+    
+    public async Task DeleteProjectRiskElement(int id)
+    {
+        await using var context = Factory.CreateDbContext();
+        var Element = await context.ProjectRiskElements.FindAsync(id);
+        if (Element != null)
+        {
+            context.ProjectRiskElements.Remove(Element);
+            await context.SaveChangesAsync();
+        }
+    }
 }

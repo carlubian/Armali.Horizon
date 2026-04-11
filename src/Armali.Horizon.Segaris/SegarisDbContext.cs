@@ -46,6 +46,8 @@ public class SegarisDbContext(DbContextOptions<SegarisDbContext> options) : DbCo
     public DbSet<ProjectStatus> ProjectStatuses { get; set; }
     public DbSet<ProjectEntity> ProjectEntities { get; set; }
     public DbSet<ProjectSubEntity> ProjectSubEntities { get; set; }
+    public DbSet<ProjectRiskCategory> ProjectRiskCategories { get; set; }
+    public DbSet<ProjectRiskElement> ProjectRiskElements { get; set; }
     
     // ARCHIVE module
     public DbSet<ArchiveCategory> ArchiveCategories { get; set; }
@@ -269,6 +271,17 @@ public class SegarisDbContext(DbContextOptions<SegarisDbContext> options) : DbCo
             new ProjectAxis { Id = 28, Name = "FIRE", ProgramId = 7},
             new ProjectAxis { Id = 29, Name = "GRUP", ProgramId = 7},
             new ProjectAxis { Id = 30, Name = "SIPL", ProgramId = 7}
+        );
+        
+        modelBuilder.Entity<ProjectRiskCategory>().HasData(
+            new ProjectRiskCategory { Id = 1, Name = "Technical" },
+            new ProjectRiskCategory { Id = 2, Name = "Financial" },
+            new ProjectRiskCategory { Id = 3, Name = "Schedule" },
+            new ProjectRiskCategory { Id = 4, Name = "Scope" },
+            new ProjectRiskCategory { Id = 5, Name = "Resource" },
+            new ProjectRiskCategory { Id = 6, Name = "External" },
+            new ProjectRiskCategory { Id = 7, Name = "Legal" },
+            new ProjectRiskCategory { Id = 8, Name = "Operational" }
         );
         
         // ARCHIVE module seed data
