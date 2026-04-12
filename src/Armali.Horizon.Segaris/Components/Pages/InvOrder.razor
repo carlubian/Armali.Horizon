@@ -3,6 +3,7 @@
 @using Armali.Horizon.Segaris.Services
 
 @inject InventoryService InventoryService
+@inject ProjectService ProjectService
 @inject NavigationManager Nav
 
 <HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="LoadData" />
@@ -116,7 +117,9 @@
                         <HorizonCellHeader TItem="InvOrderSubEntity" Name="Actions" />
                     </Header>
                     <RowTemplate Context="subEntity">
-                        <HorizonCellText Content="@(Index(Items, subEntity.ItemId)?.Name ?? "Private item")" />
+                        <HorizonCellTwoLine Title="@(Index(Items, subEntity.ItemId)?.Name ?? "Private item")"
+                                            Subtitle="@(subEntity.ProjectId is not null ? (Projects.FirstOrDefault(p => p.Id == subEntity.ProjectId.Value)?.Name ?? "Deleted") : "—")"
+                                            Center="false" />
                         <HorizonCellText Content="@subEntity.ItemCount" />
                         <HorizonCellCurrency Content="@subEntity.Amount" />
                         <HorizonCellButtons>
@@ -154,6 +157,12 @@
                     <HorizonFormCell Label="Total amount">
                         <HorizonInputNumber @bind-Amount="@TargetSubEntity!.Amount"/>
                     </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Project">
+                        <HorizonEntityLink LinkedName="@(TargetSubEntity!.ProjectId is not null ? Projects.FirstOrDefault(p => p.Id == TargetSubEntity.ProjectId.Value)?.Name : null)"
+                                           OnSelectClicked="@(() => ShowProjectSelector = true)"
+                                           OnClearClicked="@(() => TargetSubEntity!.ProjectId = null)" />
+                    </HorizonFormCell>
                 </HorizonForm>
             </Content>
             <Controls>
@@ -180,6 +189,10 @@
     </HorizonPopup>
 }
 
+<ProjectSelectorPopup @bind-Visible="ShowProjectSelector"
+                      CurrentUser="@CurrentUser"
+                      OnSelected="OnProjectSelected" />
+
 @code {
     
     private bool ShowEditPopup;
@@ -187,6 +200,7 @@
     private bool ShowSubEntityPopup;
     private bool ShowSubEntityEditPopup;
     private bool ShowSubEntityDeletePopup;
+    private bool ShowProjectSelector;
     private PopupIntent Intent = PopupIntent.None;
     private string CurrentUser = string.Empty;
 
@@ -199,6 +213,9 @@
     private IEnumerable<InvOrderSubEntity> SubEntities = [];
     private InvOrderSubEntity? TargetSubEntity;
     private IDictionary<int, InvOrderStats> EntityStats = new Dictionary<int, InvOrderStats>();
+    
+    // Proyectos disponibles para enlace
+    private IEnumerable<ProjectEntity> Projects = [];
     
     private void InventoryVendors()
     {
@@ -219,6 +236,7 @@
     private async Task LoadData()
     {
         Vendors = await InventoryService.GetInvVendorEntities(CurrentUser);
+        Projects = await ProjectService.GetProjectEntities(CurrentUser);
         await Refresh();
     }
     
@@ -367,5 +385,11 @@
         if (entityId == 0)
             return new InvOrderStats();
         return await InventoryService.GetInvOrderStats(entityId);
+    }
+    
+    private void OnProjectSelected(int projectId)
+    {
+        if (TargetSubEntity is not null)
+            TargetSubEntity.ProjectId = projectId;
     }
 }

@@ -116,6 +116,11 @@ public class InvOrderSubEntity
     public int OrderId { get; set; }
     [ForeignKey("OrderId")]
     public InvOrderEntity? Order { get; set; }
+    
+    /// <summary>
+    /// Enlace opcional a un proyecto.
+    /// </summary>
+    public int? ProjectId { get; set; }
 }
 
 public class InvOrderStatus : Identifiable, Nameable, Colorable

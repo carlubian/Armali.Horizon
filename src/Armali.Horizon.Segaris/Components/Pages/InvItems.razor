@@ -332,7 +332,14 @@
     private async Task PopupHistory(InvItemEntity entity)
     {
         TargetEntity = entity;
-        HistoryEntries = await InventoryService.GetInvItemPriceHistory(entity.Id, CurrentUser);
+        HistoryEntries = (await InventoryService.GetInvItemPriceHistory(entity.Id, CurrentUser))
+            .Select(n =>
+            {
+                n.UnitPrice = Math.Abs(n.UnitPrice);
+                n.TotalAmount = Math.Abs(n.TotalAmount);
+                return n;
+            })
+            .ToList();
         ShowHistoryPopup = true;
 
         if (HistoryEntries.Any())
