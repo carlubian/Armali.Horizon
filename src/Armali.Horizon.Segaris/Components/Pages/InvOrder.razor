@@ -13,7 +13,6 @@
     <SidebarBottom>
         <HorizonHeroButton Color="hz-apollo" Icon="fa-briefcase" Caption="Vendors" OnClick="@InventoryVendors" />
         <HorizonHeroButton Color="hz-apollo" Icon="fa-boxes-stacked" Caption="Items" OnClick="@InventoryItems" />
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-truck-fast" Caption="Orders" OnClick="@InventoryOrders" />
     </SidebarBottom>
     <Body>
     
@@ -209,11 +208,6 @@
     private void InventoryItems()
     {
         Nav.NavigateTo("/inv/items");
-    }
-    
-    private void InventoryOrders()
-    {
-        Nav.NavigateTo("/inv/orders");
     }
 
     protected override async Task OnInitializedAsync()

@@ -11,7 +11,6 @@
         <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Vendor" OnClick="@(() => PopupCreate())" />
     </Sidebar>
     <SidebarBottom>
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-briefcase" Caption="Vendors" OnClick="@InventoryVendors" />
         <HorizonHeroButton Color="hz-apollo" Icon="fa-boxes-stacked" Caption="Items" OnClick="@InventoryItems" />
         <HorizonHeroButton Color="hz-apollo" Icon="fa-truck-fast" Caption="Orders" OnClick="@InventoryOrders" />
     </SidebarBottom>
@@ -100,11 +99,6 @@
     private IEnumerable<InvVendorEntity> Entities = [];
     private InvVendorEntity? TargetEntity;
     private IDictionary<int, InvVendorStats> EntityStats = new Dictionary<int, InvVendorStats>();
-    
-    private void InventoryVendors()
-    {
-        Nav.NavigateTo("/inv/vendors");
-    }
     
     private void InventoryItems()
     {

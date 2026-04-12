@@ -9,7 +9,6 @@
     </Sidebar>
     <SidebarBottom>
         <HorizonHeroButton Color="hz-apollo" Icon="fa-warehouse" Caption="Assets" OnClick="@(() => NavigateAssets())" />
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Code info" OnClick="@(() => NavigateCode())"/>
     </SidebarBottom>
     <Body>
         <HorizonLabelTitle Text="Asset Code format" />
@@ -171,10 +170,5 @@
     private void NavigateAssets()
     {
         Nav.NavigateTo("/assets");
-    }
-
-    private void NavigateCode()
-    {
-        Nav.NavigateTo("/assets/code");
     }
 }

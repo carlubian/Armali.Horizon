@@ -11,7 +11,6 @@
         <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Garment" OnClick="@(() => PopupCreate())" />
     </Sidebar>
     <SidebarBottom>
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-shirt" Caption="Garments" OnClick="@(() => NavigateClothes())" />
         <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Code info" OnClick="@(() => NavigateCode())"/>
     </SidebarBottom>
     <Body>
@@ -252,11 +251,6 @@
         ColorAssignments = await ClothesService.GetAllColorAssignments();
     }
     
-    private void NavigateClothes()
-    {
-        Nav.NavigateTo("/clothes");
-    }
-
     private void NavigateCode()
     {
         Nav.NavigateTo("/clothes/code");
