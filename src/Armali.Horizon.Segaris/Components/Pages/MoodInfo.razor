@@ -8,7 +8,6 @@
     </Sidebar>
     <SidebarBottom>
         <HorizonHeroButton Color="hz-apollo" Icon="fa-shirt" Caption="Records" OnClick="@(() => Records())" />
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Mood Info" OnClick="@(() => Info())" />
     </SidebarBottom>
     <Body>
         
@@ -251,10 +250,5 @@
     private void Records()
     {
         Nav.NavigateTo("/mood");
-    }
-
-    private void Info()
-    {
-        Nav.NavigateTo("/mood/info");
     }
 }

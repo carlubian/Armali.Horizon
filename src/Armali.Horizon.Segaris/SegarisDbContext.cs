@@ -48,6 +48,7 @@ public class SegarisDbContext(DbContextOptions<SegarisDbContext> options) : DbCo
     public DbSet<ProjectSubEntity> ProjectSubEntities { get; set; }
     public DbSet<ProjectRiskCategory> ProjectRiskCategories { get; set; }
     public DbSet<ProjectRiskElement> ProjectRiskElements { get; set; }
+    public DbSet<ProjectBudget> ProjectBudgets { get; set; }
     
     // ARCHIVE module
     public DbSet<ArchiveCategory> ArchiveCategories { get; set; }
@@ -283,6 +284,11 @@ public class SegarisDbContext(DbContextOptions<SegarisDbContext> options) : DbCo
             new ProjectRiskCategory { Id = 7, Name = "Legal" },
             new ProjectRiskCategory { Id = 8, Name = "Operational" }
         );
+        
+        // Índice único: un solo presupuesto por año y proyecto
+        modelBuilder.Entity<ProjectBudget>()
+            .HasIndex(b => new { b.ProjectId, b.Year })
+            .IsUnique();
         
         // ARCHIVE module seed data
         modelBuilder.Entity<ArchiveCategory>().HasData(

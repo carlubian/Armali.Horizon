@@ -217,4 +217,124 @@ public class ProjectService
             await context.SaveChangesAsync();
         }
     }
+    
+    // ── Budgets ──────────────────────────────────────────────
+    
+    public async Task<List<ProjectBudget>> GetProjectBudgets(int projectId)
+    {
+        await using var context = Factory.CreateDbContext();
+        return await context.ProjectBudgets
+            .Where(b => b.ProjectId == projectId)
+            .OrderBy(b => b.Year)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+    
+    /// <summary>
+    /// Verifica si ya existe un presupuesto para el mismo proyecto y año.
+    /// Opcionalmente excluye un Id (para permitir la edición del mismo registro).
+    /// </summary>
+    public async Task<bool> BudgetYearExists(int projectId, int year, int? excludeId = null)
+    {
+        await using var context = Factory.CreateDbContext();
+        return await context.ProjectBudgets
+            .AnyAsync(b => b.ProjectId == projectId 
+                        && b.Year == year 
+                        && (excludeId == null || b.Id != excludeId));
+    }
+    
+    public async Task AddProjectBudget(ProjectBudget budget)
+    {
+        await using var context = Factory.CreateDbContext();
+        context.ProjectBudgets.Add(budget);
+        await context.SaveChangesAsync();
+    }
+    
+    public async Task UpdateProjectBudget(ProjectBudget budget)
+    {
+        await using var context = Factory.CreateDbContext();
+        context.ProjectBudgets.Update(budget);
+        await context.SaveChangesAsync();
+    }
+    
+    public async Task DeleteProjectBudget(int id)
+    {
+        await using var context = Factory.CreateDbContext();
+        var Budget = await context.ProjectBudgets.FindAsync(id);
+        if (Budget != null)
+        {
+            context.ProjectBudgets.Remove(Budget);
+            await context.SaveChangesAsync();
+        }
+    }
+    
+    /// <summary>
+    /// Calcula el gasto real de un proyecto para un año concreto, sumando:
+    /// 1) CapexEntity asociados al proyecto cuya Date esté en el año.
+    /// 2) OpexSubEntity de contratos Opex asociados al proyecto cuya Date esté en el año.
+    /// 3) TravelSubEntity de viajes asociados al proyecto cuyo StartDate esté en el año.
+    /// 4) InvOrderSubEntity vinculadas al proyecto cuyo pedido padre tenga PurchaseDate en el año.
+    /// </summary>
+    public async Task<double> CalculateActualBudget(int projectId, int year)
+    {
+        await using var context = Factory.CreateDbContext();
+        
+        var YearStart = new DateTime(year, 1, 1);
+        var YearEnd = new DateTime(year + 1, 1, 1);
+        
+        // 1) Capex directo vinculado al proyecto en ese año
+        var CapexTotal = await context.CapexEntities
+            .Where(c => c.ProjectId == projectId
+                     && c.Date >= YearStart
+                     && c.Date < YearEnd)
+            .SumAsync(c => c.Amount);
+        
+        // 2) Opex: sub-entidades de contratos vinculados al proyecto, con Date en el año
+        var OpexContractIds = await context.OpexEntities
+            .Where(o => o.ProjectId == projectId)
+            .Select(o => o.Id)
+            .ToListAsync();
+        
+        var OpexTotal = OpexContractIds.Count > 0
+            ? await context.OpexSubEntities
+                .Where(s => OpexContractIds.Contains(s.ContractId)
+                         && s.Date >= YearStart
+                         && s.Date < YearEnd)
+                .SumAsync(s => s.Amount)
+            : 0.0;
+        
+        // 3) Travel: sub-entidades de viajes vinculados al proyecto, con StartDate en el año
+        var TravelIds = await context.TravelEntities
+            .Where(t => t.ProjectId == projectId
+                     && t.StartDate >= YearStart
+                     && t.StartDate < YearEnd)
+            .Select(t => t.Id)
+            .ToListAsync();
+        
+        var TravelTotal = TravelIds.Count > 0
+            ? await context.TravelSubEntities
+                .Where(s => TravelIds.Contains(s.TravelId))
+                .SumAsync(s => s.Amount)
+            : 0.0;
+        
+        // 4) Inventario: líneas de pedido vinculadas al proyecto cuyo pedido padre
+        //    tenga PurchaseDate en el año objetivo.
+        var InvOrderIds = await context.InvOrderEntities
+            .Where(o => o.PurchaseDate >= YearStart
+                     && o.PurchaseDate < YearEnd)
+            .Select(o => o.Id)
+            .ToListAsync();
+        
+        var InventoryTotal = InvOrderIds.Count > 0
+            ? await context.InvOrderSubEntities
+                .Where(s => s.ProjectId == projectId
+                         && InvOrderIds.Contains(s.OrderId))
+                .SumAsync(s => s.Amount)
+            : 0.0;
+        
+        // Final) Devolver el gasto total como valor absoluto, ya que el porcentaje
+        // de gastos se calcula mejor sobre cifras positivas
+        var FinalSum = CapexTotal + OpexTotal + TravelTotal + InventoryTotal;
+        return Math.Abs(FinalSum);
+    }
 }

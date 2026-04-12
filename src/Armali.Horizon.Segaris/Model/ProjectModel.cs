@@ -131,3 +131,30 @@ public class ProjectRiskElement
     [NotMapped]
     public int Score => Probability * Severity * Mitigation;
 }
+
+public class ProjectBudget
+{
+    public int Id { get; set; }
+    
+    [Required]
+    [Range(2000, 2200)]
+    public int Year { get; set; } = DateTime.Today.Year;
+    
+    [Required]
+    public double Estimated { get; set; }
+    
+    [Required]
+    public double Actual { get; set; }
+    
+    public int ProjectId { get; set; }
+    [ForeignKey("ProjectId")]
+    public ProjectEntity? Project { get; set; }
+    
+    /// <summary>
+    /// Porcentaje del presupuesto estimado ya gastado: (Actual / Estimated) × 100.
+    /// Devuelve 0 si Estimated es 0 para evitar división por cero.
+    /// </summary>
+    [NotMapped]
+    public double SpentPercent => Estimated == 0 ? 0 : (Actual / Estimated) * 100;
+}
+

@@ -13,7 +13,8 @@
         @if (TargetEntity != null)
         {
             <HorizonHeroButton Color="hz-apollo" Icon="fa-pen" Caption="Edit Project" OnClick="@(() => PopupEdit(TargetEntity))" />
-            <HorizonHeroButton Color="hz-tefiti" Icon="fa-plus" Caption="Add File" OnClick="@(() => PopupSubEntityCreate())" />
+            <HorizonHeroButton Color="hz-tefiti" Icon="fa-magnifying-glass-dollar" Caption="Add Budget" OnClick="@(() => PopupBudget(TargetEntity))" />
+            <HorizonHeroButton Color="hz-tefiti" Icon="fa-file-arrow-up" Caption="Add File" OnClick="@(() => PopupSubEntityCreate())" />
         }
     </Sidebar>
     <SidebarBottom>
@@ -90,6 +91,28 @@
                         </div>
                     </div>
                 </div>
+                
+                <br />
+                <HorizonLabelTitle Text="Project Budget" />
+                <HorizonTable Items="@Budgets">
+                    <Header>
+                        <HorizonCellHeader TItem="ProjectBudget" Name="Year" />
+                        <HorizonCellHeader TItem="ProjectBudget" Name="Estimated" />
+                        <HorizonCellHeader TItem="ProjectBudget" Name="Actual" />
+                        <HorizonCellHeader TItem="ProjectBudget" Name="Spent %" />
+                        <HorizonCellHeader TItem="ProjectBudget" Name="Actions" />
+                    </Header>
+                    <RowTemplate Context="budget">
+                        <HorizonCellText Content="@budget.Year" />
+                        <HorizonCellCurrency Content="@budget.Estimated" />
+                        <HorizonCellCurrency Content="@budget.Actual" />
+                        <HorizonCellText Content="@($"{budget.SpentPercent:F1} %")" />
+                        <HorizonCellButtons>
+                            <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupBudgetEdit(budget))"/>
+                            <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupBudgetDelete(budget))"/>
+                        </HorizonCellButtons>
+                    </RowTemplate>
+                </HorizonTable>
                 
                 <br />
                 <HorizonLabelTitle Text="Project Files" />
@@ -264,13 +287,68 @@
     </HorizonPopup>
 }
 
+@if (ShowBudgetEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowBudgetEditPopup" OnCanceled="BudgetRefresh">
+        <HorizonDialog Title="@(BudgetIntent == PopupIntent.Create ? "New Budget" : "Edit Budget")">
+            <Content>
+                <HorizonForm Model="TargetBudget" Columns="2">
+                    <HorizonFormCell Label="Year">
+                        <HorizonInputInteger @bind-Amount="@TargetBudget!.Year"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Estimated">
+                        <HorizonInputNumber @bind-Amount="@TargetBudget!.Estimated"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Actual">
+                        <HorizonInputNumber @bind-Amount="@TargetBudget!.Actual"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Auto-calculate">
+                        <HorizonInlineButton Color="hz-tefiti" Icon="fa-calculator" Caption="Calculate" OnClick="@(() => AutoCalculateActual())"/>
+                    </HorizonFormCell>
+                </HorizonForm>
+                
+                @if (!string.IsNullOrEmpty(BudgetValidationError))
+                {
+                    <p class="text-hz-tribunal font-hz-text mt-2">@BudgetValidationError</p>
+                }
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => BudgetDoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => BudgetDoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowBudgetDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowBudgetDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this budget?" />
+                <HorizonLabelText Text="@($"Year {TargetBudget!.Year} — Estimated: {TargetBudget.Estimated:F2} €")" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => BudgetDoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => BudgetDoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
 @code {
     private bool ShowEditPopup;
     private bool ShowDeletePopup;
     private bool ShowSubEntityPopup;
     private bool ShowSubEntityEditPopup;
     private bool ShowSubEntityDeletePopup;
+    private bool ShowBudgetEditPopup;
+    private bool ShowBudgetDeletePopup;
     private PopupIntent Intent = PopupIntent.None;
+    private PopupIntent BudgetIntent = PopupIntent.None;
     private string CurrentUser = string.Empty;
     
     // PROJECT module entities
@@ -284,6 +362,11 @@
     private IEnumerable<ProjectSubEntity> SubEntities = [];
     private ProjectSubEntity? TargetSubEntity;
     private IBrowserFile? SelectedFile;
+    
+    // Budget
+    private IEnumerable<ProjectBudget> Budgets = [];
+    private ProjectBudget? TargetBudget;
+    private string BudgetValidationError = string.Empty;
     
     // Risk Analysis summary
     private IEnumerable<ProjectRiskCategory> RiskCategories = [];
@@ -417,6 +500,7 @@
     {
         TargetEntity = project;
         await SubEntityRefresh();
+        await BudgetRefresh();
         RiskElements = await ProjectService.GetProjectRiskElements(project.Id);
     }
     
@@ -526,5 +610,88 @@
             .Key;
         
         return Index(RiskCategories, LeadCategoryId)?.Name ?? "—";
+    }
+    
+    // ── Budget ───────────────────────────────────────────────
+    
+    private async Task BudgetRefresh()
+    {
+        Budgets = await ProjectService.GetProjectBudgets(TargetEntity!.Id);
+    }
+    
+    private void PopupBudget(ProjectEntity entity)
+    {
+        TargetEntity = entity;
+        TargetBudget = new ProjectBudget
+        {
+            ProjectId = TargetEntity!.Id,
+            Year = DateTime.Today.Year
+        };
+        BudgetValidationError = string.Empty;
+        BudgetIntent = PopupIntent.Create;
+        ShowBudgetEditPopup = true;
+    }
+    
+    private void PopupBudgetEdit(ProjectBudget budget)
+    {
+        TargetBudget = budget;
+        BudgetValidationError = string.Empty;
+        BudgetIntent = PopupIntent.Edit;
+        ShowBudgetEditPopup = true;
+    }
+    
+    private void PopupBudgetDelete(ProjectBudget budget)
+    {
+        TargetBudget = budget;
+        ShowBudgetDeletePopup = true;
+    }
+    
+    private async Task BudgetDoCreate()
+    {
+        // Validar unicidad de año por proyecto
+        var ExcludeId = BudgetIntent == PopupIntent.Edit ? TargetBudget!.Id : (int?)null;
+        var Exists = await ProjectService.BudgetYearExists(TargetBudget!.ProjectId, TargetBudget.Year, ExcludeId);
+        if (Exists)
+        {
+            BudgetValidationError = $"A budget for year {TargetBudget.Year} already exists in this project.";
+            return;
+        }
+        
+        if (BudgetIntent is PopupIntent.Create)
+            await ProjectService.AddProjectBudget(TargetBudget!);
+        else
+            await ProjectService.UpdateProjectBudget(TargetBudget!);
+        
+        await BudgetRefresh();
+        BudgetValidationError = string.Empty;
+        ShowBudgetEditPopup = false;
+    }
+    
+    private async Task BudgetDoDelete()
+    {
+        await ProjectService.DeleteProjectBudget(TargetBudget!.Id);
+        await BudgetRefresh();
+        ShowBudgetDeletePopup = false;
+    }
+    
+    private async Task BudgetDoNotCreate()
+    {
+        TargetBudget = null;
+        BudgetValidationError = string.Empty;
+        await BudgetRefresh();
+        ShowBudgetEditPopup = false;
+    }
+    
+    private async Task BudgetDoNotDelete()
+    {
+        TargetBudget = null;
+        await BudgetRefresh();
+        ShowBudgetDeletePopup = false;
+    }
+    
+    private async Task AutoCalculateActual()
+    {
+        TargetBudget!.Actual = await ProjectService.CalculateActualBudget(
+            TargetBudget.ProjectId, TargetBudget.Year);
     }
 }

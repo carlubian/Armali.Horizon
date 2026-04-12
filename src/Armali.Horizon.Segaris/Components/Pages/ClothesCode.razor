@@ -8,8 +8,7 @@
         
     </Sidebar>
     <SidebarBottom>
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-shirt" Caption="Garments" OnClick="@(() => NavigateClothes())" />
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Code info" OnClick="@(() => NavigateCode())"/>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-shirt" Caption="Wardrobe" OnClick="@(() => NavigateClothes())" />
     </SidebarBottom>
     <Body>
         <HorizonLabelTitle Text="Garment Code format" />
@@ -163,10 +162,5 @@
     private void NavigateClothes()
     {
         Nav.NavigateTo("/clothes");
-    }
-
-    private void NavigateCode()
-    {
-        Nav.NavigateTo("/clothes/code");
     }
 }

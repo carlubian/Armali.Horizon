@@ -11,7 +11,6 @@
         <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Person" OnClick="@(() => PopupCreate())" />
     </Sidebar>
     <SidebarBottom>
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-people-group" Caption="Table" OnClick="@FirebirdTable" />
         <HorizonHeroButton Color="hz-apollo" Icon="fa-calendar-days" Caption="Calendar" OnClick="@FirebirdCalendar" />
     </SidebarBottom>
     <Body>
@@ -211,11 +210,6 @@
     private async Task LoadData()
     {
         await Refresh();
-    }
-    
-    private void FirebirdTable()
-    {
-        Nav.NavigateTo("/firebird");
     }
     
     private void FirebirdCalendar()

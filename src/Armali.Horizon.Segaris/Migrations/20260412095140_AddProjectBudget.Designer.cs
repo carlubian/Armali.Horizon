@@ -3,6 +3,7 @@ using System;
 using Armali.Horizon.Segaris;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Armali.Horizon.Segaris.Migrations
 {
     [DbContext(typeof(SegarisDbContext))]
-    partial class SegarisDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260412095140_AddProjectBudget")]
+    partial class AddProjectBudget
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
@@ -1340,9 +1343,6 @@ namespace Armali.Horizon.Segaris.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("OrderId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int?>("ProjectId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");

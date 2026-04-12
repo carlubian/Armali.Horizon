@@ -15,7 +15,6 @@
         <HorizonHeroButton Color="hz-sol" Icon="fa-chevron-right" Caption="Week Fwd" OnClick="@(() => NextWeek())" />
     </Sidebar>
     <SidebarBottom>
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-shirt" Caption="Records" OnClick="@(() => Records())" />
         <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Mood Info" OnClick="@(() => Info())" />
     </SidebarBottom>
     <Body>
@@ -140,11 +139,6 @@
         await Refresh();
     }
     
-    private void Records()
-    {
-        Nav.NavigateTo("/mood");
-    }
-
     private void Info()
     {
         Nav.NavigateTo("/mood/info");
