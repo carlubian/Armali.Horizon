@@ -2,13 +2,17 @@
 
 @using Armali.Horizon.Segaris.Services
 
+@using System.Text
+
 @inject InventoryService InventoryService
 @inject NavigationManager Nav
+@inject IJSRuntime JS
 
 <HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="LoadData" />
 <HorizonLayout AppName="Segaris" PageName="Items">
     <Sidebar>
         <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Item" OnClick="@(() => PopupCreate())" />
+        <HorizonHeroButton Color="hz-tefiti" Icon="fa-cart-arrow-down" Caption="Shopping List" OnClick="@(() => PopupShoppingList())" />
     </Sidebar>
     <SidebarBottom>
         <HorizonHeroButton Color="hz-apollo" Icon="fa-briefcase" Caption="Vendors" OnClick="@InventoryVendors" />
@@ -116,10 +120,57 @@
     </HorizonPopup>
 }
 
+@if (ShowShoppingListPopup)
+{
+    <HorizonPopup @bind-Visible="ShowShoppingListPopup">
+        <HorizonDialog Title="Shopping List">
+            <Content>
+                @if (!ShoppingListGroups.Any())
+                {
+                    <HorizonLabelTitle Text="All items are in stock!" />
+                    <HorizonLabelText Text="No items need to be purchased at this time." />
+                }
+                else
+                {
+                    @foreach (var group in ShoppingListGroups)
+                    {
+                        <div class="mb-4">
+                            <HorizonLabelTitle Text="@(Index(Vendors, group.Key)?.Name ?? "Private vendor")" />
+                            <HorizonStaticTable>
+                                <Header>
+                                    <HorizonStaticTableHeader Name="Item" />
+                                    <HorizonStaticTableHeader Name="Qty needed" />
+                                </Header>
+                                <Body>
+                                    @foreach (var item in group)
+                                    {
+                                        <HorizonStaticTableRow>
+                                            <HorizonStaticTableCell>@item.Name</HorizonStaticTableCell>
+                                            <HorizonStaticTableCell Center="true">@(item.MinStock - item.CurrentStock)</HorizonStaticTableCell>
+                                        </HorizonStaticTableRow>
+                                    }
+                                </Body>
+                            </HorizonStaticTable>
+                        </div>
+                    }
+                }
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Close" OnClick="@(() => ShowShoppingListPopup = false)"/>
+                @if (ShoppingListGroups.Any())
+                {
+                    <HorizonInlineButton Color="hz-tefiti" Icon="fa-download" Caption="Download" OnClick="@DownloadShoppingList"/>
+                }
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
 @code {
     
     private bool ShowEditPopup;
     private bool ShowDeletePopup;
+    private bool ShowShoppingListPopup;
     private PopupIntent Intent = PopupIntent.None;
     private string CurrentUser = string.Empty;
 
@@ -128,6 +179,7 @@
     private IEnumerable<InvItemStatus> Statuses = [];
     private IEnumerable<InvVendorEntity> Vendors = [];
     private IEnumerable<InvItemEntity> Entities = [];
+    private IEnumerable<IGrouping<int, InvItemEntity>> ShoppingListGroups = [];
     private InvItemEntity? TargetEntity;
     
     private void InventoryVendors()
@@ -214,5 +266,38 @@
         TargetEntity = null;
         await Refresh();
         ShowDeletePopup = false;
+    }
+    
+    private async Task PopupShoppingList()
+    {
+        var items = await InventoryService.GetShoppingList(CurrentUser);
+        ShoppingListGroups = items.GroupBy(e => e.VendorId);
+        ShowShoppingListPopup = true;
+    }
+    
+    private async Task DownloadShoppingList()
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"# Shopping List — {DateTime.Now:yyyy-MM-dd}");
+        sb.AppendLine();
+        
+        foreach (var group in ShoppingListGroups)
+        {
+            var vendorName = Index(Vendors, group.Key)?.Name ?? "Private vendor";
+            sb.AppendLine($"## {vendorName}");
+            sb.AppendLine();
+            sb.AppendLine("| Item | Qty needed |");
+            sb.AppendLine("|------|------------|");
+            foreach (var item in group)
+            {
+                sb.AppendLine($"| {item.Name} | {item.MinStock - item.CurrentStock} |");
+            }
+            sb.AppendLine();
+        }
+        
+        var bytes = Encoding.UTF8.GetBytes(sb.ToString());
+        var base64 = Convert.ToBase64String(bytes);
+        var fileName = $"procurement {DateTime.Now:yyyy-MM-dd}.md";
+        await JS.InvokeVoidAsync("downloadFile", fileName, base64);
     }
 }

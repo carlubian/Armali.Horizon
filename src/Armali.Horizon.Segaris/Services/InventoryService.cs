@@ -83,6 +83,19 @@ public class InventoryService
             .ToListAsync();
     }
     
+    /// Retorna ítems cuyo CurrentStock < MinStock (y MinStock > 0), respetando privacidad.
+    public async Task<List<InvItemEntity>> GetShoppingList(string userId)
+    {
+        await using var context = Factory.CreateDbContext();
+        return await context.InvItemEntities
+            .Where(e => e.MinStock > 0 && e.CurrentStock < e.MinStock)
+            .Where(e => !e.IsPrivate || e.Creator == userId)
+            .OrderBy(e => e.VendorId)
+            .ThenBy(e => e.Name)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
     public async Task<List<InvItemEntity>> GetInvItemByVendor(int vendorId, string userId)
     {
         await using var context = Factory.CreateDbContext();

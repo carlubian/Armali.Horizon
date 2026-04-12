@@ -944,5 +944,181 @@ public class InventoryServiceTests
         // 33.336 * 3 = 100.008 → redondeado a 100.01
         stats.TotalAmount.ShouldBe(100.01);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // ── GetShoppingList (ítems con stock bajo) ──────────────
+    // ═══════════════════════════════════════════════════════════
+
+    [TestMethod]
+    public async Task GetShoppingList_ReturnsOnlyItemsBelowMinStock()
+    {
+        var vendor = await CreateVendor();
+
+        // Item con stock suficiente — no debe aparecer
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Suficiente",
+            CurrentStock = 20,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        // Item con stock bajo — debe aparecer
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Faltante",
+            CurrentStock = 3,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        var list = await _service.GetShoppingList("user1");
+        list.Count.ShouldBe(1);
+        list[0].Name.ShouldBe("Faltante");
+    }
+
+    [TestMethod]
+    public async Task GetShoppingList_ExcludesItemsWithZeroMinStock()
+    {
+        var vendor = await CreateVendor();
+
+        // Item sin mínimo configurado — no debe aparecer aunque CurrentStock sea 0
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Sin minimo",
+            CurrentStock = 0,
+            MinStock = 0,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        var list = await _service.GetShoppingList("user1");
+        list.ShouldBeEmpty();
+    }
+
+    [TestMethod]
+    public async Task GetShoppingList_RespectsPrivacyFilter()
+    {
+        var vendor = await CreateVendor();
+
+        // Item privado de user1 con stock bajo
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Privado bajo",
+            CurrentStock = 1,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = true,
+            Creator = "user1"
+        });
+
+        // Item público con stock bajo
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Publico bajo",
+            CurrentStock = 2,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        // user1 ve ambos
+        var user1List = await _service.GetShoppingList("user1");
+        user1List.Count.ShouldBe(2);
+
+        // user2 solo ve el público
+        var user2List = await _service.GetShoppingList("user2");
+        user2List.Count.ShouldBe(1);
+        user2List[0].Name.ShouldBe("Publico bajo");
+    }
+
+    [TestMethod]
+    public async Task GetShoppingList_IsOrderedByVendorThenName()
+    {
+        var vendorA = await CreateVendor("Vendor A");
+        var vendorB = await CreateVendor("Vendor B");
+
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Zeta",
+            CurrentStock = 0,
+            MinStock = 5,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendorA.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Alfa",
+            CurrentStock = 0,
+            MinStock = 5,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendorA.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Beta",
+            CurrentStock = 1,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendorB.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        var list = await _service.GetShoppingList("user1");
+        list.Count.ShouldBe(3);
+
+        // Primero vendorA (Id menor), ordenados por nombre
+        list[0].Name.ShouldBe("Alfa");
+        list[1].Name.ShouldBe("Zeta");
+        // Luego vendorB
+        list[2].Name.ShouldBe("Beta");
+    }
+
+    [TestMethod]
+    public async Task GetShoppingList_ReturnsEmpty_WhenAllItemsHaveSufficientStock()
+    {
+        var vendor = await CreateVendor();
+
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Ok",
+            CurrentStock = 50,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        var list = await _service.GetShoppingList("user1");
+        list.ShouldBeEmpty();
+    }
 }
 
