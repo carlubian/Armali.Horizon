@@ -140,3 +140,14 @@ public class InvOrderStats
     public int ItemCount { get; set; }
     public double TotalAmount { get; set; }
 }
+
+/// Registro proyectado del historial de precios de un ítem en pedidos.
+public class InvItemPriceHistory
+{
+    public int Id { get; set; }
+    public DateTime PurchaseDate { get; set; }
+    public int VendorId { get; set; }
+    public int ItemCount { get; set; }
+    public double TotalAmount { get; set; }
+    public double UnitPrice { get; set; }
+}

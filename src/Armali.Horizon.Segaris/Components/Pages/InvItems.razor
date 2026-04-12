@@ -40,6 +40,7 @@
             <HorizonCellText Content="@(Index(Vendors, context.VendorId)?.Name ?? "Private vendor")" />
             <HorizonCellTwoLine Title=@($"Current: {context.CurrentStock}") Subtitle=@($"Min: {context.MinStock}") />
             <HorizonCellButtons>
+                <HorizonMiniButton Color="hz-sol" Icon="fa-clock-rotate-left" OnClick="@(() => PopupHistory(context))"/>
                 <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupEdit(context))"/>
                 <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupDelete(context))"/>
             </HorizonCellButtons>
@@ -120,6 +121,54 @@
     </HorizonPopup>
 }
 
+@if (ShowHistoryPopup)
+{
+    <HorizonPopup @bind-Visible="ShowHistoryPopup">
+        <HorizonDialog Title="@($"Price History — {TargetEntity!.Name}")">
+            <Content>
+                @if (!HistoryEntries.Any())
+                {
+                    <HorizonLabelTitle Text="No order history found" />
+                    <HorizonLabelText Text="This item has not been purchased in any order yet." />
+                }
+                else
+                {
+                    <!-- Gráfico de precio unitario (último año) -->
+                    <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+                        <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                            Unit price (last 12 months)
+                        </div>
+                        <div class="w-full h-60 mt-2">
+                            <canvas id="invItemChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Tabla paginada con todo el historial -->
+                    <HorizonTable Items="@HistoryEntries">
+                        <Header>
+                            <HorizonCellHeader TItem="InvItemPriceHistory" Name="Date" />
+                            <HorizonCellHeader TItem="InvItemPriceHistory" Name="Vendor" />
+                            <HorizonCellHeader TItem="InvItemPriceHistory" Name="Qty" />
+                            <HorizonCellHeader TItem="InvItemPriceHistory" Name="Unit Price" />
+                            <HorizonCellHeader TItem="InvItemPriceHistory" Name="Total" />
+                        </Header>
+                        <RowTemplate Context="entry">
+                            <HorizonCellDateTime Content="@entry.PurchaseDate" />
+                            <HorizonCellText Content="@(Index(Vendors, entry.VendorId)?.Name ?? "Private vendor")" />
+                            <HorizonCellText Content="@entry.ItemCount" />
+                            <HorizonCellCurrency Content="@entry.UnitPrice" />
+                            <HorizonCellCurrency Content="@entry.TotalAmount" />
+                        </RowTemplate>
+                    </HorizonTable>
+                }
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Close" OnClick="@(() => ShowHistoryPopup = false)"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
 @if (ShowShoppingListPopup)
 {
     <HorizonPopup @bind-Visible="ShowShoppingListPopup">
@@ -171,6 +220,8 @@
     private bool ShowEditPopup;
     private bool ShowDeletePopup;
     private bool ShowShoppingListPopup;
+    private bool ShowHistoryPopup;
+    private bool _renderChartPending;
     private PopupIntent Intent = PopupIntent.None;
     private string CurrentUser = string.Empty;
 
@@ -180,6 +231,7 @@
     private IEnumerable<InvVendorEntity> Vendors = [];
     private IEnumerable<InvItemEntity> Entities = [];
     private IEnumerable<IGrouping<int, InvItemEntity>> ShoppingListGroups = [];
+    private List<InvItemPriceHistory> HistoryEntries = [];
     private InvItemEntity? TargetEntity;
     
     private void InventoryVendors()
@@ -267,7 +319,41 @@
         await Refresh();
         ShowDeletePopup = false;
     }
-    
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_renderChartPending)
+        {
+            _renderChartPending = false;
+            await RenderHistoryChart();
+        }
+    }
+
+    private async Task PopupHistory(InvItemEntity entity)
+    {
+        TargetEntity = entity;
+        HistoryEntries = await InventoryService.GetInvItemPriceHistory(entity.Id, CurrentUser);
+        ShowHistoryPopup = true;
+
+        if (HistoryEntries.Any())
+            _renderChartPending = true;
+    }
+
+    private async Task RenderHistoryChart()
+    {
+        // Filtrar solo entradas del último año para el gráfico, ordenadas cronológicamente
+        var cutoff = DateTime.Now.AddYears(-1);
+        var chartData = HistoryEntries
+            .Where(h => h.PurchaseDate >= cutoff)
+            .OrderBy(h => h.PurchaseDate)
+            .ToList();
+
+        var labels = chartData.Select(h => h.PurchaseDate.ToString("yyyy-MM-dd")).ToArray();
+        var prices = chartData.Select(h => h.UnitPrice).ToArray();
+
+        await JS.InvokeVoidAsync("renderInvItemChart", labels, prices);
+    }
+
     private async Task PopupShoppingList()
     {
         var items = await InventoryService.GetShoppingList(CurrentUser);
