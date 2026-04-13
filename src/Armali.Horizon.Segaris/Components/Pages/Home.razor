@@ -25,7 +25,7 @@
         <SegarisCard Title="FIREBIRD" Image="/images/phoenix.png" OnClick="@Firebird" />
         <SegarisCard Title="CLOTHES" Image="/images/clothes.png" OnClick="@Clothes" />
         <SegarisCard Title="MOOD" Image="/images/mood.png" OnClick="@Mood" />
-        <SegarisCard Title="ANALYTICS" Image="/images/chart.png" OnClick="@Capex" />
+        <SegarisCard Title="ANALYTICS" Image="/images/chart.png" OnClick="@Analytics" />
         
     </div>
     </Body>
@@ -101,5 +101,10 @@
     private void Mood()
     {
         Nav.NavigateTo("/mood");
+    }
+    
+    private void Analytics()
+    {
+        Nav.NavigateTo("/expenses");
     }
 }

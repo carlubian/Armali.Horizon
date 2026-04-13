@@ -1,0 +1,388 @@
+﻿@page "/mood/trends"
+
+@using System.Globalization
+@using Armali.Horizon.Segaris.Services
+
+@inject MoodService MoodService
+@inject IJSRuntime JS
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="Refresh" />
+<HorizonLayout AppName="Segaris" PageName="Mood">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-sol" Icon="fa-chevron-left" Caption="Year Back" OnClick="@(() => PreviousYear())" />
+        <HorizonHeroButton Color="hz-sol" Icon="fa-chevron-right" Caption="Year Fwd" OnClick="@(() => NextYear())" />
+    </Sidebar>
+    <SidebarBottom>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-table-list" Caption="Records" OnClick="@(() => Records())" />
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Mood Info" OnClick="@(() => Info())"/>
+    </SidebarBottom>
+    <Body>
+    
+        <!-- Título del año -->
+        <div class="text-center font-hz-header text-2xl text-hz-arendelle mb-4">
+            Trends — @CurrentYear
+        </div>
+    
+        <!-- Gráfico semanal: Min, Avg y Max agregados por semana ISO -->
+        <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+            <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                Weekly Score Trends (min / avg / max)
+            </div>
+            <div class="w-full h-60 mt-2">
+                <canvas id="moodTrendsWeekly"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico por día de la semana: Min, Avg y Max agregados lunes a domingo -->
+        <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+            <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                Weekday Score Trends (min / avg / max)
+            </div>
+            <div class="w-full h-60 mt-2">
+                <canvas id="moodTrendsWeekday"></canvas>
+            </div>
+        </div>
+        
+        <!-- Sección de comparación interanual -->
+        <div class="text-center font-hz-header text-xl text-hz-arendelle mb-2 mt-6">
+            Year-over-Year Evolution
+        </div>
+        <HorizonColumns>
+            <!-- Comparación interanual por mes -->
+            <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+                <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                    Monthly Avg — @(CurrentYear - 1) vs @CurrentYear
+                </div>
+                <div class="w-full h-60 mt-2">
+                    <canvas id="moodTrendsEvoMonth"></canvas>
+                </div>
+            </div>
+            
+            <!-- Comparación interanual por día de la semana -->
+            <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+                <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                    Weekday Avg — @(CurrentYear - 1) vs @CurrentYear
+                </div>
+                <div class="w-full h-60 mt-2">
+                    <canvas id="moodTrendsEvoWeekday"></canvas>
+                </div>
+            </div>
+        </HorizonColumns>
+        
+        <!-- Sección de tablas de moods frecuentes -->
+        <div class="text-center font-hz-header text-xl text-hz-arendelle mb-2 mt-6">
+            Frequent Moods
+        </div>
+        <HorizonColumns>
+            <!-- Top 3 moods más frecuentes por mes -->
+            <HorizonStaticTable>
+                <Header>
+                    <HorizonStaticTableHeader Name="Month" />
+                    <HorizonStaticTableHeader Name="#1 Mood" />
+                    <HorizonStaticTableHeader Name="#2 Mood" />
+                    <HorizonStaticTableHeader Name="#3 Mood" />
+                </Header>
+                <Body>
+                    @for (var m = 1; m <= 12; m++)
+                    {
+                        var month = m;
+                        var monthName = CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(month);
+                        var top = MonthTopMoods.GetValueOrDefault(month, []);
+                        <HorizonStaticTableRow>
+                            <HorizonStaticTableCell Center="true">@monthName</HorizonStaticTableCell>
+                            @for (var r = 0; r < 3; r++)
+                            {
+                                if (r < top.Count)
+                                {
+                                    var entry = top[r];
+                                    <HorizonStaticTableCell Center="true">@entry.Name (@entry.Percent.ToString("F0")%)</HorizonStaticTableCell>
+                                }
+                                else
+                                {
+                                    <HorizonStaticTableCell Center="true">—</HorizonStaticTableCell>
+                                }
+                            }
+                        </HorizonStaticTableRow>
+                    }
+                </Body>
+            </HorizonStaticTable>
+            
+            <!-- Top 3 moods más frecuentes por día de la semana -->
+            <HorizonStaticTable>
+                <Header>
+                    <HorizonStaticTableHeader Name="Weekday" />
+                    <HorizonStaticTableHeader Name="#1 Mood" />
+                    <HorizonStaticTableHeader Name="#2 Mood" />
+                    <HorizonStaticTableHeader Name="#3 Mood" />
+                </Header>
+                <Body>
+                    @foreach (var dow in WeekdayOrder)
+                    {
+                        var dayName = CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedDayName(dow);
+                        var top = WeekdayTopMoods.GetValueOrDefault(dow, []);
+                        <HorizonStaticTableRow>
+                            <HorizonStaticTableCell Center="true">@dayName</HorizonStaticTableCell>
+                            @for (var r = 0; r < 3; r++)
+                            {
+                                if (r < top.Count)
+                                {
+                                    var entry = top[r];
+                                    <HorizonStaticTableCell Center="true">@entry.Name (@entry.Percent.ToString("F0")%)</HorizonStaticTableCell>
+                                }
+                                else
+                                {
+                                    <HorizonStaticTableCell Center="true">—</HorizonStaticTableCell>
+                                }
+                            }
+                        </HorizonStaticTableRow>
+                    }
+                </Body>
+            </HorizonStaticTable>
+        </HorizonColumns>
+    
+    </Body>
+</HorizonLayout>
+
+@code {
+    private string CurrentUser = string.Empty;
+    private int CurrentYear = DateTime.Today.Year;
+    private bool _renderChartPending;
+    
+    // Datos cargados
+    private IEnumerable<MoodCategory> Categories = [];
+    private List<MoodEntity> Entities = [];
+    private List<MoodEntity> PrevYearEntities = [];
+    
+    // Datos agregados para los gráficos
+    private List<WeekAggregation> WeeklyStats = [];
+    private List<WeekdayAggregation> WeekdayStats = [];
+    
+    // Datos para comparación interanual
+    private List<double?> EvoMonthPrev = [];
+    private List<double?> EvoMonthCurr = [];
+    private List<double?> EvoWeekdayPrev = [];
+    private List<double?> EvoWeekdayCurr = [];
+    
+    // Datos para tablas de moods frecuentes
+    private Dictionary<int, List<TopMoodEntry>> MonthTopMoods = new();
+    private Dictionary<DayOfWeek, List<TopMoodEntry>> WeekdayTopMoods = new();
+    
+    // Orden de días lunes a domingo
+    private static readonly DayOfWeek[] WeekdayOrder =
+        [DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday,
+         DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday];
+    
+    // Tipos auxiliares para agregación
+    private record WeekAggregation(int Week, double? Min, double? Avg, double? Max);
+    private record WeekdayAggregation(DayOfWeek Day, double? Min, double? Avg, double? Max);
+    private record TopMoodEntry(string Name, int Count, double Percent);
+
+    protected override async Task OnInitializedAsync()
+    {
+        Categories = await MoodService.GetMoodCategories();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_renderChartPending)
+        {
+            _renderChartPending = false;
+            await RenderCharts();
+        }
+    }
+
+    private async Task PreviousYear()
+    {
+        CurrentYear--;
+        await Refresh();
+    }
+
+    private async Task NextYear()
+    {
+        CurrentYear++;
+        await Refresh();
+    }
+    
+    private void Records()
+    {
+        Nav.NavigateTo("/mood");
+    }
+    
+    private void Info()
+    {
+        Nav.NavigateTo("/mood/info");
+    }
+
+    private async Task Refresh()
+    {
+        // Cargar datos del año actual y del año anterior (para comparación interanual)
+        var yearStart = new DateTime(CurrentYear, 1, 1);
+        var yearEnd = new DateTime(CurrentYear, 12, 31);
+        var prevStart = new DateTime(CurrentYear - 1, 1, 1);
+        var prevEnd = new DateTime(CurrentYear - 1, 12, 31);
+        
+        Entities = await MoodService.GetMoodBetweenDates(yearStart, yearEnd, CurrentUser);
+        PrevYearEntities = await MoodService.GetMoodBetweenDates(prevStart, prevEnd, CurrentUser);
+        
+        ComputeWeeklyStats();
+        ComputeWeekdayStats();
+        ComputeEvolutionData();
+        ComputeTopMoods();
+        
+        _renderChartPending = true;
+        StateHasChanged();
+    }
+
+    // --- Agregación por semana ISO ---
+    private void ComputeWeeklyStats()
+    {
+        var maxWeek = ISOWeek.GetWeeksInYear(CurrentYear);
+        
+        var grouped = Entities
+            .GroupBy(e => ISOWeek.GetWeekOfYear(e.Date))
+            .ToDictionary(g => g.Key, g => g.ToList());
+        
+        WeeklyStats = Enumerable.Range(1, maxWeek)
+            .Select(w =>
+            {
+                if (!grouped.TryGetValue(w, out var items) || items.Count == 0)
+                    return new WeekAggregation(w, null, null, null);
+                
+                return new WeekAggregation(w,
+                    Clamp(items.Min(x => x.Score)),
+                    Clamp(items.Average(x => x.Score)),
+                    Clamp(items.Max(x => x.Score)));
+            })
+            .ToList();
+    }
+
+    // --- Agregación por día de la semana ---
+    private void ComputeWeekdayStats()
+    {
+        var grouped = Entities
+            .GroupBy(e => e.Date.DayOfWeek)
+            .ToDictionary(g => g.Key, g => g.ToList());
+        
+        WeekdayStats = WeekdayOrder
+            .Select(dow =>
+            {
+                if (!grouped.TryGetValue(dow, out var items) || items.Count == 0)
+                    return new WeekdayAggregation(dow, null, null, null);
+                
+                return new WeekdayAggregation(dow,
+                    Clamp(items.Min(x => x.Score)),
+                    Clamp(items.Average(x => x.Score)),
+                    Clamp(items.Max(x => x.Score)));
+            })
+            .ToList();
+    }
+
+    // --- Datos de comparación interanual ---
+    private void ComputeEvolutionData()
+    {
+        EvoMonthCurr = ComputeMonthlyAvg(Entities);
+        EvoMonthPrev = ComputeMonthlyAvg(PrevYearEntities);
+        
+        EvoWeekdayCurr = ComputeWeekdayAvg(Entities);
+        EvoWeekdayPrev = ComputeWeekdayAvg(PrevYearEntities);
+    }
+
+    private static List<double?> ComputeMonthlyAvg(List<MoodEntity> data)
+    {
+        var grouped = data.GroupBy(e => e.Date.Month).ToDictionary(g => g.Key, g => g.ToList());
+        return Enumerable.Range(1, 12)
+            .Select(m => grouped.TryGetValue(m, out var items) && items.Count > 0
+                ? (double?)Clamp(items.Average(x => x.Score))
+                : null)
+            .ToList();
+    }
+
+    private static List<double?> ComputeWeekdayAvg(List<MoodEntity> data)
+    {
+        var grouped = data.GroupBy(e => e.Date.DayOfWeek).ToDictionary(g => g.Key, g => g.ToList());
+        return WeekdayOrder
+            .Select(dow => grouped.TryGetValue(dow, out var items) && items.Count > 0
+                ? (double?)Clamp(items.Average(x => x.Score))
+                : null)
+            .ToList();
+    }
+
+    // --- Top 3 moods por mes y por día de la semana ---
+    private void ComputeTopMoods()
+    {
+        MonthTopMoods = new Dictionary<int, List<TopMoodEntry>>();
+        var byMonth = Entities.GroupBy(e => e.Date.Month);
+        foreach (var mg in byMonth)
+        {
+            var total = mg.Count();
+            var top = mg.GroupBy(e => e.CategoryId)
+                .Select(cg =>
+                {
+                    var catName = Categories.FirstOrDefault(c => c.Id == cg.Key)?.Name ?? "?";
+                    return new TopMoodEntry(catName, cg.Count(), cg.Count() * 100.0 / total);
+                })
+                .OrderByDescending(t => t.Count)
+                .Take(3)
+                .ToList();
+            MonthTopMoods[mg.Key] = top;
+        }
+        
+        WeekdayTopMoods = new Dictionary<DayOfWeek, List<TopMoodEntry>>();
+        var byDow = Entities.GroupBy(e => e.Date.DayOfWeek);
+        foreach (var dg in byDow)
+        {
+            var total = dg.Count();
+            var top = dg.GroupBy(e => e.CategoryId)
+                .Select(cg =>
+                {
+                    var catName = Categories.FirstOrDefault(c => c.Id == cg.Key)?.Name ?? "?";
+                    return new TopMoodEntry(catName, cg.Count(), cg.Count() * 100.0 / total);
+                })
+                .OrderByDescending(t => t.Count)
+                .Take(3)
+                .ToList();
+            WeekdayTopMoods[dg.Key] = top;
+        }
+    }
+
+    // --- Renderizado de gráficos vía JS interop ---
+    private async Task RenderCharts()
+    {
+        // Gráfico semanal
+        var weekLabels = WeeklyStats.Select(w => $"W{w.Week}").ToArray();
+        var weekMin = WeeklyStats.Select<WeekAggregation, object?>(w => w.Min).ToArray();
+        var weekAvg = WeeklyStats.Select<WeekAggregation, object?>(w => w.Avg).ToArray();
+        var weekMax = WeeklyStats.Select<WeekAggregation, object?>(w => w.Max).ToArray();
+        await JS.InvokeVoidAsync("renderMoodTrendsWeekly", weekLabels, weekMin, weekAvg, weekMax);
+        
+        // Gráfico por día de la semana
+        var dowLabels = WeekdayStats
+            .Select(w => CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedDayName(w.Day))
+            .ToArray();
+        var dowMin = WeekdayStats.Select<WeekdayAggregation, object?>(w => w.Min).ToArray();
+        var dowAvg = WeekdayStats.Select<WeekdayAggregation, object?>(w => w.Avg).ToArray();
+        var dowMax = WeekdayStats.Select<WeekdayAggregation, object?>(w => w.Max).ToArray();
+        await JS.InvokeVoidAsync("renderMoodTrendsWeekday", dowLabels, dowMin, dowAvg, dowMax);
+        
+        // Comparación interanual por mes
+        var monthLabels = Enumerable.Range(1, 12)
+            .Select(m => CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedMonthName(m))
+            .ToArray();
+        var evoMonthPrev = EvoMonthPrev.Cast<object?>().ToArray();
+        var evoMonthCurr = EvoMonthCurr.Cast<object?>().ToArray();
+        await JS.InvokeVoidAsync("renderMoodTrendsEvoMonth",
+            monthLabels, evoMonthPrev, evoMonthCurr, CurrentYear - 1, CurrentYear);
+        
+        // Comparación interanual por día de la semana
+        var dowEvoLabels = WeekdayOrder
+            .Select(d => CultureInfo.InvariantCulture.DateTimeFormat.GetAbbreviatedDayName(d))
+            .ToArray();
+        var evoWdPrev = EvoWeekdayPrev.Cast<object?>().ToArray();
+        var evoWdCurr = EvoWeekdayCurr.Cast<object?>().ToArray();
+        await JS.InvokeVoidAsync("renderMoodTrendsEvoWeekday",
+            dowEvoLabels, evoWdPrev, evoWdCurr, CurrentYear - 1, CurrentYear);
+    }
+
+    private static double Clamp(double value) => Math.Clamp(value, 0, 5);
+}
