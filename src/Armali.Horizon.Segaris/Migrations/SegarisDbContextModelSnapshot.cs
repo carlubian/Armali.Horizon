@@ -519,6 +519,301 @@ namespace Armali.Horizon.Segaris.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Armali.Horizon.Segaris.Model.ClothesColor", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ClothesColors");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Maroon",
+                            Reference = "#800000"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Auburn",
+                            Reference = "#D22C21"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Coral",
+                            Reference = "#E51D2E"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Vermilion",
+                            Reference = "#E62E00"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Indian",
+                            Reference = "#FF8000"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "Flame",
+                            Reference = "#F98F1D"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Name = "Amber",
+                            Reference = "#FFBF00"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Name = "Hansa",
+                            Reference = "#FFDF00"
+                        },
+                        new
+                        {
+                            Id = 9,
+                            Name = "Lime",
+                            Reference = "#D9E542"
+                        },
+                        new
+                        {
+                            Id = 10,
+                            Name = "Chartreuse",
+                            Reference = "#75B313"
+                        },
+                        new
+                        {
+                            Id = 11,
+                            Name = "Shamrock",
+                            Reference = "#009E60"
+                        },
+                        new
+                        {
+                            Id = 12,
+                            Name = "Viridian",
+                            Reference = "#007F5C"
+                        },
+                        new
+                        {
+                            Id = 13,
+                            Name = "Emerald",
+                            Reference = "#3FD8AA"
+                        },
+                        new
+                        {
+                            Id = 14,
+                            Name = "Verdigris",
+                            Reference = "#43B3AE"
+                        },
+                        new
+                        {
+                            Id = 15,
+                            Name = "Munsell",
+                            Reference = "#367588"
+                        },
+                        new
+                        {
+                            Id = 16,
+                            Name = "Sky",
+                            Reference = "#0CB7F2"
+                        },
+                        new
+                        {
+                            Id = 17,
+                            Name = "Cerulean",
+                            Reference = "#0087D1"
+                        },
+                        new
+                        {
+                            Id = 18,
+                            Name = "Indigo",
+                            Reference = "#0A3F7A"
+                        },
+                        new
+                        {
+                            Id = 19,
+                            Name = "Cobalt",
+                            Reference = "#333C87"
+                        },
+                        new
+                        {
+                            Id = 20,
+                            Name = "Violet",
+                            Reference = "#4C2882"
+                        },
+                        new
+                        {
+                            Id = 21,
+                            Name = "Iris",
+                            Reference = "#7F68A5"
+                        },
+                        new
+                        {
+                            Id = 22,
+                            Name = "Mauve",
+                            Reference = "#E0B0FF"
+                        },
+                        new
+                        {
+                            Id = 23,
+                            Name = "Orcein",
+                            Reference = "#C20073"
+                        },
+                        new
+                        {
+                            Id = 24,
+                            Name = "Salmon",
+                            Reference = "#EB6362"
+                        },
+                        new
+                        {
+                            Id = 25,
+                            Name = "Sandy",
+                            Reference = "#ECE2C6"
+                        },
+                        new
+                        {
+                            Id = 26,
+                            Name = "Sienna",
+                            Reference = "#C58A3E"
+                        },
+                        new
+                        {
+                            Id = 27,
+                            Name = "Cinnamon",
+                            Reference = "#8D4925"
+                        },
+                        new
+                        {
+                            Id = 28,
+                            Name = "Umber",
+                            Reference = "#955F20"
+                        },
+                        new
+                        {
+                            Id = 29,
+                            Name = "Chestnut",
+                            Reference = "#5D432C"
+                        },
+                        new
+                        {
+                            Id = 30,
+                            Name = "Sepia",
+                            Reference = "#663B2A"
+                        },
+                        new
+                        {
+                            Id = 31,
+                            Name = "Artemisia",
+                            Reference = "#E0E5FF"
+                        },
+                        new
+                        {
+                            Id = 32,
+                            Name = "Ash",
+                            Reference = "#CDCDCD"
+                        },
+                        new
+                        {
+                            Id = 33,
+                            Name = "Steel",
+                            Reference = "#8B8589"
+                        },
+                        new
+                        {
+                            Id = 34,
+                            Name = "Slate",
+                            Reference = "#5D6770"
+                        },
+                        new
+                        {
+                            Id = 35,
+                            Name = "Anthracite",
+                            Reference = "#383E42"
+                        },
+                        new
+                        {
+                            Id = 36,
+                            Name = "Cordovan",
+                            Reference = "#3B2A21"
+                        });
+                });
+
+            modelBuilder.Entity("Armali.Horizon.Segaris.Model.ClothesColorAssignment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ColorId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("GarmentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("StyleId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ColorId");
+
+                    b.HasIndex("GarmentId");
+
+                    b.HasIndex("StyleId");
+
+                    b.ToTable("ClothesColorAssignments");
+                });
+
+            modelBuilder.Entity("Armali.Horizon.Segaris.Model.ClothesColorStyle", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ClothesColorStyles");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Primary"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Secondary"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Details"
+                        });
+                });
+
             modelBuilder.Entity("Armali.Horizon.Segaris.Model.ClothesEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -557,6 +852,8 @@ namespace Armali.Horizon.Segaris.Migrations
                     b.HasIndex("CategoryId");
 
                     b.HasIndex("StatusId");
+
+                    b.HasIndex("WashTypeId");
 
                     b.ToTable("ClothesEntities");
                 });
@@ -1043,6 +1340,9 @@ namespace Armali.Horizon.Segaris.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("OrderId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("ProjectId")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
@@ -2234,6 +2534,32 @@ namespace Armali.Horizon.Segaris.Migrations
                         });
                 });
 
+            modelBuilder.Entity("Armali.Horizon.Segaris.Model.ProjectBudget", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double>("Actual")
+                        .HasColumnType("REAL");
+
+                    b.Property<double>("Estimated")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProjectId", "Year")
+                        .IsUnique();
+
+                    b.ToTable("ProjectBudgets");
+                });
+
             modelBuilder.Entity("Armali.Horizon.Segaris.Model.ProjectEntity", b =>
                 {
                     b.Property<int>("Id")
@@ -2325,6 +2651,97 @@ namespace Armali.Horizon.Segaris.Migrations
                             Id = 7,
                             Name = "SOCI"
                         });
+                });
+
+            modelBuilder.Entity("Armali.Horizon.Segaris.Model.ProjectRiskCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ProjectRiskCategories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Technical"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Financial"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Schedule"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Scope"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Resource"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "External"
+                        },
+                        new
+                        {
+                            Id = 7,
+                            Name = "Legal"
+                        },
+                        new
+                        {
+                            Id = 8,
+                            Name = "Operational"
+                        });
+                });
+
+            modelBuilder.Entity("Armali.Horizon.Segaris.Model.ProjectRiskElement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Mitigation")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Probability")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("ProjectId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("ProjectId");
+
+                    b.ToTable("ProjectRiskElements");
                 });
 
             modelBuilder.Entity("Armali.Horizon.Segaris.Model.ProjectStatus", b =>
@@ -2804,6 +3221,33 @@ namespace Armali.Horizon.Segaris.Migrations
                     b.Navigation("Status");
                 });
 
+            modelBuilder.Entity("Armali.Horizon.Segaris.Model.ClothesColorAssignment", b =>
+                {
+                    b.HasOne("Armali.Horizon.Segaris.Model.ClothesColor", "Color")
+                        .WithMany()
+                        .HasForeignKey("ColorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Armali.Horizon.Segaris.Model.ClothesEntity", "Garment")
+                        .WithMany()
+                        .HasForeignKey("GarmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Armali.Horizon.Segaris.Model.ClothesColorStyle", "Style")
+                        .WithMany()
+                        .HasForeignKey("StyleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Color");
+
+                    b.Navigation("Garment");
+
+                    b.Navigation("Style");
+                });
+
             modelBuilder.Entity("Armali.Horizon.Segaris.Model.ClothesEntity", b =>
                 {
                     b.HasOne("Armali.Horizon.Segaris.Model.ClothesCategory", "Category")
@@ -2812,15 +3256,15 @@ namespace Armali.Horizon.Segaris.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Armali.Horizon.Segaris.Model.ClothesWashType", "WashType")
-                        .WithMany()
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("Armali.Horizon.Segaris.Model.ClothesStatus", "Status")
                         .WithMany()
                         .HasForeignKey("StatusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Armali.Horizon.Segaris.Model.ClothesWashType", "WashType")
+                        .WithMany()
+                        .HasForeignKey("WashTypeId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -2997,6 +3441,17 @@ namespace Armali.Horizon.Segaris.Migrations
                     b.Navigation("Contract");
                 });
 
+            modelBuilder.Entity("Armali.Horizon.Segaris.Model.ProjectBudget", b =>
+                {
+                    b.HasOne("Armali.Horizon.Segaris.Model.ProjectEntity", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Project");
+                });
+
             modelBuilder.Entity("Armali.Horizon.Segaris.Model.ProjectEntity", b =>
                 {
                     b.HasOne("Armali.Horizon.Segaris.Model.ProjectAxis", "Axis")
@@ -3022,6 +3477,25 @@ namespace Armali.Horizon.Segaris.Migrations
                     b.Navigation("Program");
 
                     b.Navigation("Status");
+                });
+
+            modelBuilder.Entity("Armali.Horizon.Segaris.Model.ProjectRiskElement", b =>
+                {
+                    b.HasOne("Armali.Horizon.Segaris.Model.ProjectRiskCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Armali.Horizon.Segaris.Model.ProjectEntity", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Project");
                 });
 
             modelBuilder.Entity("Armali.Horizon.Segaris.Model.ProjectSubEntity", b =>

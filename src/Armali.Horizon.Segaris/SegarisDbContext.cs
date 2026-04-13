@@ -46,6 +46,9 @@ public class SegarisDbContext(DbContextOptions<SegarisDbContext> options) : DbCo
     public DbSet<ProjectStatus> ProjectStatuses { get; set; }
     public DbSet<ProjectEntity> ProjectEntities { get; set; }
     public DbSet<ProjectSubEntity> ProjectSubEntities { get; set; }
+    public DbSet<ProjectRiskCategory> ProjectRiskCategories { get; set; }
+    public DbSet<ProjectRiskElement> ProjectRiskElements { get; set; }
+    public DbSet<ProjectBudget> ProjectBudgets { get; set; }
     
     // ARCHIVE module
     public DbSet<ArchiveCategory> ArchiveCategories { get; set; }
@@ -67,7 +70,10 @@ public class SegarisDbContext(DbContextOptions<SegarisDbContext> options) : DbCo
     public DbSet<ClothesCategory> ClothesCategories { get; set; }
     public DbSet<ClothesStatus> ClothesStatuses { get; set; }
     public DbSet<ClothesWashType> ClothesWashTypes { get; set; }
+    public DbSet<ClothesColor> ClothesColors { get; set; }
+    public DbSet<ClothesColorStyle> ClothesColorStyles { get; set; }
     public DbSet<ClothesEntity> ClothesEntities { get; set; }
+    public DbSet<ClothesColorAssignment> ClothesColorAssignments { get; set; }
     
     // MOOD module
     public DbSet<MoodCategory> MoodCategories { get; set; }
@@ -268,6 +274,22 @@ public class SegarisDbContext(DbContextOptions<SegarisDbContext> options) : DbCo
             new ProjectAxis { Id = 30, Name = "SIPL", ProgramId = 7}
         );
         
+        modelBuilder.Entity<ProjectRiskCategory>().HasData(
+            new ProjectRiskCategory { Id = 1, Name = "Technical" },
+            new ProjectRiskCategory { Id = 2, Name = "Financial" },
+            new ProjectRiskCategory { Id = 3, Name = "Schedule" },
+            new ProjectRiskCategory { Id = 4, Name = "Scope" },
+            new ProjectRiskCategory { Id = 5, Name = "Resource" },
+            new ProjectRiskCategory { Id = 6, Name = "External" },
+            new ProjectRiskCategory { Id = 7, Name = "Legal" },
+            new ProjectRiskCategory { Id = 8, Name = "Operational" }
+        );
+        
+        // Índice único: un solo presupuesto por año y proyecto
+        modelBuilder.Entity<ProjectBudget>()
+            .HasIndex(b => new { b.ProjectId, b.Year })
+            .IsUnique();
+        
         // ARCHIVE module seed data
         modelBuilder.Entity<ArchiveCategory>().HasData(
             new ArchiveCategory { Id = 1, Name = "Government" },
@@ -347,6 +369,51 @@ public class SegarisDbContext(DbContextOptions<SegarisDbContext> options) : DbCo
             new ClothesWashType { Id = 2, Name = "Color Wash" },
             new ClothesWashType { Id = 3, Name = "Special Wash" },
             new ClothesWashType { Id = 4, Name = "Wash Alone" }
+        );
+        
+        modelBuilder.Entity<ClothesColorStyle>().HasData(
+            new ClothesColorStyle { Id = 1, Name = "Primary" },
+            new ClothesColorStyle { Id = 2, Name = "Secondary" },
+            new ClothesColorStyle { Id = 3, Name = "Details" }
+        );
+        
+        modelBuilder.Entity<ClothesColor>().HasData(
+            new ClothesColor { Id = 1, Name = "Maroon", Reference = "#800000" },
+            new ClothesColor { Id = 2, Name = "Auburn", Reference = "#D22C21" },
+            new ClothesColor { Id = 3, Name = "Coral", Reference = "#E51D2E" },
+            new ClothesColor { Id = 4, Name = "Vermilion", Reference = "#E62E00" },
+            new ClothesColor { Id = 5, Name = "Indian", Reference = "#FF8000" },
+            new ClothesColor { Id = 6, Name = "Flame", Reference = "#F98F1D" },
+            new ClothesColor { Id = 7, Name = "Amber", Reference = "#FFBF00" },
+            new ClothesColor { Id = 8, Name = "Hansa", Reference = "#FFDF00" },
+            new ClothesColor { Id = 9, Name = "Lime", Reference = "#D9E542" },
+            new ClothesColor { Id = 10, Name = "Chartreuse", Reference = "#75B313" },
+            new ClothesColor { Id = 11, Name = "Shamrock", Reference = "#009E60" },
+            new ClothesColor { Id = 12, Name = "Viridian", Reference = "#007F5C" },
+            new ClothesColor { Id = 13, Name = "Emerald", Reference = "#3FD8AA" },
+            new ClothesColor { Id = 14, Name = "Verdigris", Reference = "#43B3AE" },
+            new ClothesColor { Id = 15, Name = "Munsell", Reference = "#367588" },
+            new ClothesColor { Id = 16, Name = "Sky", Reference = "#0CB7F2" },
+            new ClothesColor { Id = 17, Name = "Cerulean", Reference = "#0087D1" },
+            new ClothesColor { Id = 18, Name = "Indigo", Reference = "#0A3F7A" },
+            new ClothesColor { Id = 19, Name = "Cobalt", Reference = "#333C87" },
+            new ClothesColor { Id = 20, Name = "Violet", Reference = "#4C2882" },
+            new ClothesColor { Id = 21, Name = "Iris", Reference = "#7F68A5" },
+            new ClothesColor { Id = 22, Name = "Mauve", Reference = "#E0B0FF" },
+            new ClothesColor { Id = 23, Name = "Orcein", Reference = "#C20073" },
+            new ClothesColor { Id = 24, Name = "Salmon", Reference = "#EB6362" },
+            new ClothesColor { Id = 25, Name = "Sandy", Reference = "#ECE2C6" },
+            new ClothesColor { Id = 26, Name = "Sienna", Reference = "#C58A3E" },
+            new ClothesColor { Id = 27, Name = "Cinnamon", Reference = "#8D4925" },
+            new ClothesColor { Id = 28, Name = "Umber", Reference = "#955F20" },
+            new ClothesColor { Id = 29, Name = "Chestnut", Reference = "#5D432C" },
+            new ClothesColor { Id = 30, Name = "Sepia", Reference = "#663B2A" },
+            new ClothesColor { Id = 31, Name = "Artemisia", Reference = "#E0E5FF" },
+            new ClothesColor { Id = 32, Name = "Ash", Reference = "#CDCDCD" },
+            new ClothesColor { Id = 33, Name = "Steel", Reference = "#8B8589" },
+            new ClothesColor { Id = 34, Name = "Slate", Reference = "#5D6770" },
+            new ClothesColor { Id = 35, Name = "Anthracite", Reference = "#383E42" },
+            new ClothesColor { Id = 36, Name = "Cordovan", Reference = "#3B2A21" }
         );
         
         // MOOD module seed data

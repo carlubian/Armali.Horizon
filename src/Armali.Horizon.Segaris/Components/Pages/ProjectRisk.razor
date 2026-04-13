@@ -1,0 +1,219 @@
+﻿@page "/projects/risk/{ProjectId}"
+
+@using Armali.Horizon.Segaris.Services
+
+@inject ProjectService ProjectService
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="LoadData" />
+<HorizonLayout AppName="Segaris" PageName="Risk Analysis">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Risk" OnClick="@(() => PopupCreate())" />
+    </Sidebar>
+    <SidebarBottom>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-arrow-left" Caption="Back" OnClick="@(() => GoBack())" />
+    </SidebarBottom>
+    <Body>
+    
+    <HorizonTable Items="@Elements">
+        <Header>
+            <HorizonCellHeader TItem="ProjectRiskElement" Name="Name" />
+            <HorizonCellHeader TItem="ProjectRiskElement" Filterable="true"
+                               ValueSelector="@(e => Index(Categories, e.CategoryId)?.Name ?? string.Empty)" Name="Category" />
+            <HorizonCellHeader TItem="ProjectRiskElement" Name="Prob." />
+            <HorizonCellHeader TItem="ProjectRiskElement" Name="Sev." />
+            <HorizonCellHeader TItem="ProjectRiskElement" Name="Mit." />
+            <HorizonCellHeader TItem="ProjectRiskElement" Name="Score" />
+            <HorizonCellHeader TItem="ProjectRiskElement" Name="Actions" />
+        </Header>
+        <RowTemplate>
+            <HorizonCellText Content="@context.Name" />
+            <HorizonCellText Content="@Index(Categories, context.CategoryId)?.Name" />
+            <HorizonCellText Content="@context.Probability.ToString()" />
+            <HorizonCellText Content="@context.Severity.ToString()" />
+            <HorizonCellText Content="@context.Mitigation.ToString()" />
+            @if (context.Score >= 100)
+            {
+                <td class="px-4 py-2 text-hz-tribunal font-bold font-hz-text">
+                    <i class="fa-solid fa-triangle-exclamation mr-1"></i>@context.Score
+                </td>
+            }
+            else
+            {
+                <HorizonCellText Content="@context.Score.ToString()" />
+            }
+            <HorizonCellButtons>
+                <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupEdit(context))"/>
+                <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupDelete(context))"/>
+            </HorizonCellButtons>
+        </RowTemplate>
+    </HorizonTable>
+    
+    </Body>
+</HorizonLayout>
+
+@if (ShowEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowEditPopup" OnCanceled="Refresh">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New Risk Element" : "Edit Risk Element")">
+            <Content>
+                <HorizonForm Model="TargetElement" Columns="2">
+                    <HorizonFormCell Label="Name">
+                        <HorizonInputText @bind-Text="@TargetElement!.Name"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Category">
+                        <HorizonCombobox Items="Categories.Select(c => c.Id)" @bind-Value="@TargetElement!.CategoryId">
+                            <ItemTemplate Context="index">
+                                @Index(Categories, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Probability (1-10)">
+                        <HorizonInputInteger @bind-Amount="@TargetElement!.Probability"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Severity (1-10)">
+                        <HorizonInputInteger @bind-Amount="@TargetElement!.Severity"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Mitigation (1-10)">
+                        <HorizonInputInteger @bind-Amount="@TargetElement!.Mitigation"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Score (auto)">
+                        <div class="flex items-center h-10 px-2 font-hz-text @(TargetElement!.Score >= 100 ? "text-hz-tribunal font-bold" : "text-hz-arendelle")">
+                            @if (TargetElement!.Score >= 100)
+                            {
+                                <i class="fa-solid fa-triangle-exclamation mr-1"></i>
+                            }
+                            @TargetElement!.Score
+                        </div>
+                    </HorizonFormCell>
+                </HorizonForm>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => DoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this risk element?" />
+                <HorizonLabelText Text="@TargetElement!.Name" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => DoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@code {
+    [Parameter]
+    public string ProjectId { get; set; } = string.Empty;
+    
+    private bool ShowEditPopup;
+    private bool ShowDeletePopup;
+    private PopupIntent Intent = PopupIntent.None;
+    private string CurrentUser = string.Empty;
+
+    // Risk Analysis entities
+    private IEnumerable<ProjectRiskCategory> Categories = [];
+    private IEnumerable<ProjectRiskElement> Elements = [];
+    private ProjectRiskElement? TargetElement;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Categories = await ProjectService.GetProjectRiskCategories();
+    }
+
+    private async Task LoadData()
+    {
+        await Refresh();
+    }
+    
+    private async Task Refresh()
+    {
+        if (int.TryParse(ProjectId, out var id))
+        {
+            Elements = await ProjectService.GetProjectRiskElements(id);
+        }
+    }
+
+    private void GoBack()
+    {
+        Nav.NavigateTo("/projects");
+    }
+    
+    private void PopupCreate()
+    {
+        TargetElement = new ProjectRiskElement
+        {
+            ProjectId = int.TryParse(ProjectId, out var id) ? id : 0,
+            Probability = 1,
+            Severity = 1,
+            Mitigation = 1
+        };
+        
+        Intent = PopupIntent.Create;
+        ShowEditPopup = true;
+    }
+    
+    private void PopupEdit(ProjectRiskElement element)
+    {
+        TargetElement = element;
+        Intent = PopupIntent.Edit;
+        ShowEditPopup = true;
+    }
+    
+    private void PopupDelete(ProjectRiskElement element)
+    {
+        TargetElement = element;
+        ShowDeletePopup = true;
+    }
+    
+    private async Task DoCreate()
+    {
+        // Clamp de valores al rango 1-10
+        TargetElement!.Probability = Math.Clamp(TargetElement.Probability, 1, 10);
+        TargetElement.Severity = Math.Clamp(TargetElement.Severity, 1, 10);
+        TargetElement.Mitigation = Math.Clamp(TargetElement.Mitigation, 1, 10);
+        
+        if (Intent is PopupIntent.Create)
+            await ProjectService.AddProjectRiskElement(TargetElement!);
+        else
+            await ProjectService.UpdateProjectRiskElement(TargetElement!);
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoDelete()
+    {
+        await ProjectService.DeleteProjectRiskElement(TargetElement!.Id);
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+    
+    private async Task DoNotCreate()
+    {
+        TargetElement = null;
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoNotDelete()
+    {
+        TargetElement = null;
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+}

@@ -5,6 +5,7 @@
 
 @inject MoodService MoodService
 @inject IJSRuntime JS
+@inject NavigationManager Nav
 
 <HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="LoadData" />
 <HorizonLayout AppName="Segaris" PageName="Mood">
@@ -14,7 +15,7 @@
         <HorizonHeroButton Color="hz-sol" Icon="fa-chevron-right" Caption="Week Fwd" OnClick="@(() => NextWeek())" />
     </Sidebar>
     <SidebarBottom>
-        
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Mood Info" OnClick="@(() => Info())" />
     </SidebarBottom>
     <Body>
     
@@ -136,6 +137,11 @@
     {
         CurrentWeekStart = CurrentWeekStart.AddDays(7);
         await Refresh();
+    }
+    
+    private void Info()
+    {
+        Nav.NavigateTo("/mood/info");
     }
 
     protected override async Task OnInitializedAsync()

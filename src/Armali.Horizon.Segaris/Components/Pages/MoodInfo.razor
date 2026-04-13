@@ -1,0 +1,254 @@
+﻿@page "/mood/info"
+
+@inject NavigationManager Nav
+
+<HorizonLayout AppName="Segaris" PageName="Mood">
+    <Sidebar>
+        
+    </Sidebar>
+    <SidebarBottom>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-shirt" Caption="Records" OnClick="@(() => Records())" />
+    </SidebarBottom>
+    <Body>
+        
+        <div class="w-full rounded-xl overflow-hidden">
+            <table class="w-full">
+                <thead>
+                
+                </thead>
+                <tbody>
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Sad" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Disappointed</li>
+                                <li>Lonely</li>
+                                <li>Heartbroken</li>
+                                <li>Nostalgic</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Scared" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Startled</li>
+                                <li>Worried</li>
+                                <li>Suspicious</li>
+                                <li>Pessimistic</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Tense" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Anxious</li>
+                                <li>Overwhelmed</li>
+                                <li>Restless</li>
+                                <li>Wary</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Uncomfortable" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Disgusted</li>
+                                <li>Jealous</li>
+                                <li>Embarrassed</li>
+                                <li>Awkward</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Angry" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Frustrated</li>
+                                <li>Bitter</li>
+                                <li>Resentful</li>
+                                <li>Furious</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Confused" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Indecisive</li>
+                                <li>Lost</li>
+                                <li>Surprised</li>
+                                <li>Betrayed</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                                
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                                
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                                
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Insecure" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Ashamed</li>
+                                <li>Worthless</li>
+                                <li>Doubtful</li>
+                                <li>Paranoid</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Depleted" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Tired</li>
+                                <li>Burnout</li>
+                                <li>Apathetic</li>
+                                <li>Numb</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                                
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Fine" />
+                            <br />
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                                
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Confident" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Empowered</li>
+                                <li>Proud</li>
+                                <li>Determined</li>
+                                <li>Bold</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Lazy" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Self-care</li>
+                                <li>Healing</li>
+                                <li>Indoor</li>
+                                <li>Indifferent</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                                
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                                
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                                
+                        </HorizonStaticTableCell>
+                            
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Focused" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Productive</li>
+                                <li>Absorbed</li>
+                                <li>Flowing</li>
+                                <li>Withdrawn</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                
+                    <HorizonStaticTableRow>
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Peaceful" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Relaxed</li>
+                                <li>Satisfied</li>
+                                <li>Relieved</li>
+                                <li>Serene</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                        
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Inspired" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Curious</li>
+                                <li>Daring</li>
+                                <li>Amazed</li>
+                                <li>Creative</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                        
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Love" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Affectionate</li>
+                                <li>Caring</li>
+                                <li>Safe</li>
+                                <li>Connected</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                        
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Playful" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Flirty</li>
+                                <li>Cheeky</li>
+                                <li>Energetic</li>
+                                <li>Funny</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                        
+                        <HorizonStaticTableCell>
+                            <HorizonLabelTitle Text="Happy" />
+                            <ul class="text-hz-arendelle font-hz-text">
+                                <li>Excited</li>
+                                <li>Optimistic</li>
+                                <li>Grateful</li>
+                                <li>Vibing</li>
+                            </ul>
+                            <br />
+                        </HorizonStaticTableCell>
+                    </HorizonStaticTableRow>
+                </tbody>
+            </table>
+        </div>
+    
+    </Body>
+</HorizonLayout>
+
+@code {
+    private void Records()
+    {
+        Nav.NavigateTo("/mood");
+    }
+}

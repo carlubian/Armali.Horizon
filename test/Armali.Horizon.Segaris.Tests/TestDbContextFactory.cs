@@ -9,7 +9,7 @@ namespace Armali.Horizon.Segaris.Tests;
 /// para que la base de datos no se destruya entre operaciones.
 /// Implementa IDisposable para cerrar la conexión al final del test.
 /// </summary>
-internal class TestDbContextFactory : IDbContextFactory<SegarisDbContext>, IDisposable
+public class TestDbContextFactory : IDbContextFactory<SegarisDbContext>, IDisposable
 {
     private readonly SqliteConnection _connection;
     private readonly DbContextOptions<SegarisDbContext> _options;

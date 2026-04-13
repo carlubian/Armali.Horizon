@@ -1,0 +1,46 @@
+﻿<td class="px-2 text-hz-arendelle font-hz-text">
+    <div class="flex items-center justify-center gap-1 flex-wrap">
+        @if (Assignments is not null)
+        {
+            @foreach (var assignment in Assignments)
+            {
+                var color = Colors?.FirstOrDefault(c => c.Id == assignment.ColorId);
+                var style = Styles?.FirstOrDefault(s => s.Id == assignment.StyleId);
+                var hex = color?.Reference ?? "#808080";
+                var tooltip = $"{color?.Name ?? "?"} — {style?.Name ?? "?"}";
+                var size = assignment.StyleId switch
+                {
+                    1 => "width: 22px; height: 14px;",  // Primary
+                    2 => "width: 18px; height: 12px;",  // Secondary
+                    _ => "width: 14px; height: 10px;"     // Details
+                };
+
+                <span title="@tooltip"
+                      style="@($"background-color: {hex}; {size} display: inline-block; border-radius: 2px; border: 1px solid rgba(255,255,255,0.2);")">
+                </span>
+            }
+        }
+    </div>
+</td>
+
+@code {
+    /// <summary>
+    /// Asignaciones de color para esta prenda, ya ordenadas por StyleId.
+    /// </summary>
+    [Parameter]
+    public IEnumerable<ClothesColorAssignment>? Assignments { get; set; }
+
+    /// <summary>
+    /// Catálogo completo de colores (para resolver ColorId → hex).
+    /// </summary>
+    [Parameter]
+    public IEnumerable<ClothesColor>? Colors { get; set; }
+
+    /// <summary>
+    /// Catálogo completo de estilos (para resolver StyleId → nombre en tooltip).
+    /// </summary>
+    [Parameter]
+    public IEnumerable<ClothesColorStyle>? Styles { get; set; }
+}
+
+

@@ -1,0 +1,324 @@
+﻿@page "/apps"
+
+@using Armali.Horizon.Autoconfig.Model
+@using Armali.Horizon.Autoconfig.Services
+
+@inject AutoconfigService AutoconfigService
+
+<HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="Refresh" />
+<HorizonLayout AppName="Autoconfig" PageName="Apps">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add App" OnClick="@(() => PopupCreate())" />
+    </Sidebar>
+    <SidebarBottom>
+        
+    </SidebarBottom>
+    <Body>
+    
+    <HorizonTable Items="@Entities">
+        <Header>
+            <HorizonCellHeader TItem="AutoconfigApp" Name="Name" />
+            <HorizonCellHeader TItem="AutoconfigApp" Name="Info" />
+            <HorizonCellHeader TItem="AutoconfigApp" Name="Actions" />
+        </Header>
+        <RowTemplate>
+            <HorizonCellText Content=@($"{context.Name} ({Index(Nodes, context.NodeId)?.Name})") Center="false" />
+            <HorizonCellTwoLine Title="@($"{EntityStats[context.Id].VersionCount} versions")"
+                                Subtitle="@($"{EntityStats[context.Id].TotalKbSize} Kb")"/>
+            <HorizonCellButtons>
+                <HorizonMiniButton Color="hz-sol" Icon="fa-list-ol" OnClick="@(() => PopupSubEntity(context))"/>
+                <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupEdit(context))"/>
+                <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupDelete(context))"/>
+            </HorizonCellButtons>
+        </RowTemplate>
+    </HorizonTable>
+    
+    </Body>
+</HorizonLayout>
+
+@if (ShowEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowEditPopup" OnCanceled="Refresh">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New App" : "Edit App")">
+            <Content>
+                <HorizonForm Model="TargetEntity" Columns="2">
+                    <HorizonFormCell Label="Name">
+                        <HorizonInputText @bind-Text="@TargetEntity!.Name"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Node">
+                        <HorizonCombobox Items="Nodes.Select(c => c.Id)" @bind-Value="@TargetEntity!.NodeId">
+                            <ItemTemplate Context="index">
+                                @Index(Nodes, index)?.Name
+                            </ItemTemplate>
+                        </HorizonCombobox>
+                    </HorizonFormCell>
+                </HorizonForm>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => DoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this entity?" />
+                <HorizonLabelText Text="@TargetEntity!.Name" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => DoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => DoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowSubEntityPopup)
+{
+    <HorizonPopup @bind-Visible="ShowSubEntityPopup">
+        <HorizonDialog Title=@($"{TargetEntity!.Name} ({Index(Nodes, TargetEntity!.NodeId)?.Name})")>
+            <Content>
+                <HorizonTable Items="@SubEntities">
+                    <Header>
+                        <HorizonCellHeader TItem="AutoconfigVersion" Name="Name" />
+                        <HorizonCellHeader TItem="AutoconfigVersion" Name="Date" />
+                        <HorizonCellHeader TItem="AutoconfigVersion" Name="Actions" />
+                    </Header>
+                    <RowTemplate Context="subEntity">
+                        <HorizonCellText Content="@subEntity.Name" />
+                        <HorizonCellDateTime Content="@subEntity.Date"/>
+                        <HorizonCellButtons>
+                            <HorizonMiniButton Color="hz-sol" Icon="fa-file-pen" OnClick="@(() => PopupSubEntityEdit(subEntity))"/>
+                            <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupSubEntityEdit(subEntity))"/>
+                            <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupSubEntityDelete(subEntity))"/>
+                        </HorizonCellButtons>
+                    </RowTemplate>
+                </HorizonTable>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-plus" Caption="Add Version" OnClick="@(() => PopupSubEntityCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowSubEntityEditPopup)
+{
+    <HorizonPopup @bind-Visible="ShowSubEntityEditPopup" OnCanceled="SubEntityRefresh">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New Version" : "Edit Version")">
+            <Content>
+                <HorizonForm Model="TargetSubEntity" Columns="2">
+                    <HorizonFormCell Label="Major">
+                        <HorizonInputInteger @bind-Amount="@TargetSubEntity!.Major"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Minor">
+                        <HorizonInputInteger @bind-Amount="@TargetSubEntity!.Minor"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Patch">
+                        <HorizonInputInteger @bind-Amount="@TargetSubEntity!.Patch"/>
+                    </HorizonFormCell>
+                    
+                    <HorizonFormCell Label="Date">
+                        <HorizonInputDate @bind-Date="@TargetSubEntity!.Date"/>
+                    </HorizonFormCell>
+                </HorizonForm>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => SubEntityDoNotCreate())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@(() => SubEntityDoCreate())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowSubEntityDeletePopup)
+{
+    <HorizonPopup @bind-Visible="ShowSubEntityDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Are you sure you want to delete this entity?" />
+                <HorizonLabelText Text="@TargetSubEntity!.Date.ToString("yyyy-MMM-dd")" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => SubEntityDoNotDelete())"/>
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Delete" OnClick="@(() => SubEntityDoDelete())"/>
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@code {
+    private bool ShowEditPopup;
+    private bool ShowDeletePopup;
+    private bool ShowSubEntityPopup;
+    private bool ShowSubEntityEditPopup;
+    private bool ShowSubEntityDeletePopup;
+    private PopupIntent Intent = PopupIntent.None;
+    private string CurrentUser = string.Empty;
+    
+    private IEnumerable<AutoconfigNode> Nodes = [];
+    private AutoconfigNode? TargetNode = null;
+    private IEnumerable<AutoconfigApp> Entities = [];
+    private IDictionary<int, AppStats> EntityStats = new Dictionary<int, AppStats>();
+    private AutoconfigApp? TargetEntity;
+    private IEnumerable<AutoconfigVersion> SubEntities = [];
+    private AutoconfigVersion? TargetSubEntity;
+    
+    private async Task Refresh()
+    {
+        // Refresh lists
+        Nodes = await AutoconfigService.GetNodes();
+        
+        if (TargetNode is null)
+            Entities = await AutoconfigService.GetApps();
+        else
+            Entities = await AutoconfigService.GetAppsIn(TargetNode.Id);
+        
+        foreach (var Entity in Entities)
+        {
+            EntityStats[Entity.Id] = await GetStats(Entity.Id);
+        }
+    }
+    
+    private void PopupCreate()
+    {
+        // Create initial state of target entity for the form
+        TargetEntity = new AutoconfigApp()
+        {
+            NodeId = TargetNode?.Id ?? 0,
+        };
+        
+        Intent = PopupIntent.Create;
+        ShowEditPopup = true;
+    }
+
+    private void PopupEdit(AutoconfigApp entity)
+    {
+        TargetEntity = entity;
+        Intent = PopupIntent.Edit;
+        ShowEditPopup = true;
+    }
+    
+    private void PopupDelete(AutoconfigApp entity)
+    {
+        TargetEntity = entity;
+        ShowDeletePopup = true;
+    }
+    
+    private async Task DoCreate()
+    {
+        // Call service to create entity
+        if (Intent is PopupIntent.Create)
+            await AutoconfigService.AddApp(TargetEntity!);
+        else
+            await AutoconfigService.UpdateApp(TargetEntity!);
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoDelete()
+    {
+        await AutoconfigService.DeleteApp(TargetEntity!.Id);
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+
+    private async Task DoNotCreate()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowEditPopup = false;
+    }
+    
+    private async Task DoNotDelete()
+    {
+        TargetEntity = null;
+        await Refresh();
+        ShowDeletePopup = false;
+    }
+    
+    private async Task SubEntityRefresh()
+    {
+        SubEntities = await AutoconfigService.GetVersionsIn(TargetEntity!.Id);
+    }
+
+    private async Task PopupSubEntity(AutoconfigApp entity)
+    {
+        TargetEntity = entity;
+        await SubEntityRefresh();
+        ShowSubEntityPopup = true;
+    }
+    
+    private void PopupSubEntityCreate()
+    {
+        // Create initial state of target entity for the form
+        TargetSubEntity = new AutoconfigVersion()
+        {
+            AppId = TargetEntity!.Id,
+            Date = DateTime.Today
+        };
+        
+        Intent = PopupIntent.Create;
+        ShowSubEntityEditPopup = true;
+    }
+    
+    private void PopupSubEntityEdit(AutoconfigVersion entity)
+    {
+        TargetSubEntity = entity;
+        Intent = PopupIntent.Edit;
+        ShowSubEntityEditPopup = true;
+    }
+    
+    private void PopupSubEntityDelete(AutoconfigVersion entity)
+    {
+        TargetSubEntity = entity;
+        ShowSubEntityDeletePopup = true;
+    }
+    
+    private async Task SubEntityDoCreate()
+    {
+        // Call service to create entity
+        if (Intent is PopupIntent.Create)
+            await AutoconfigService.AddVersion(TargetSubEntity!);
+        else
+            await AutoconfigService.UpdateVersion(TargetSubEntity!);
+        await SubEntityRefresh();
+        ShowSubEntityEditPopup = false;
+    }
+    
+    private async Task SubEntityDoDelete()
+    {
+        await AutoconfigService.DeleteVersion(TargetSubEntity!.Id);
+        await SubEntityRefresh();
+        ShowSubEntityDeletePopup = false;
+    }
+
+    private async Task SubEntityDoNotCreate()
+    {
+        TargetSubEntity = null;
+        await SubEntityRefresh();
+        ShowSubEntityEditPopup = false;
+    }
+    
+    private async Task SubEntityDoNotDelete()
+    {
+        TargetSubEntity = null;
+        await SubEntityRefresh();
+        ShowSubEntityDeletePopup = false;
+    }
+    
+    private async Task<AppStats> GetStats(int appId)
+    {
+        if (appId == 0)
+            return new AppStats();
+        return await AutoconfigService.GetAppStats(appId);
+    }
+}

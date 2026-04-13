@@ -83,6 +83,19 @@ public class InventoryService
             .ToListAsync();
     }
     
+    /// Retorna ítems cuyo CurrentStock < MinStock (y MinStock > 0), respetando privacidad.
+    public async Task<List<InvItemEntity>> GetShoppingList(string userId)
+    {
+        await using var context = Factory.CreateDbContext();
+        return await context.InvItemEntities
+            .Where(e => e.MinStock > 0 && e.CurrentStock < e.MinStock)
+            .Where(e => !e.IsPrivate || e.Creator == userId)
+            .OrderBy(e => e.VendorId)
+            .ThenBy(e => e.Name)
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
     public async Task<List<InvItemEntity>> GetInvItemByVendor(int vendorId, string userId)
     {
         await using var context = Factory.CreateDbContext();
@@ -226,5 +239,30 @@ public class InventoryService
         result.TotalAmount = Math.Round(result.TotalAmount, 2);
         
         return result;
+    }
+    
+    /// Retorna el historial de precios unitarios de un ítem a través de todos los pedidos,
+    /// respetando la privacidad del pedido padre. Ignora entradas con ItemCount == 0.
+    public async Task<List<InvItemPriceHistory>> GetInvItemPriceHistory(int itemId, string userId)
+    {
+        await using var context = Factory.CreateDbContext();
+        return await context.InvOrderSubEntities
+            .Where(s => s.ItemId == itemId && s.ItemCount > 0)
+            .Join(
+                context.InvOrderEntities.Where(o => !o.IsPrivate || o.Creator == userId),
+                s => s.OrderId,
+                o => o.Id,
+                (s, o) => new InvItemPriceHistory
+                {
+                    Id = s.Id,
+                    PurchaseDate = o.PurchaseDate,
+                    VendorId = o.VendorId,
+                    ItemCount = s.ItemCount,
+                    TotalAmount = Math.Round(s.Amount, 2),
+                    UnitPrice = Math.Round(s.Amount / s.ItemCount, 2)
+                })
+            .OrderByDescending(h => h.PurchaseDate)
+            .AsNoTracking()
+            .ToListAsync();
     }
 }

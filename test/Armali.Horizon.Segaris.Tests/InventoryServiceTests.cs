@@ -944,5 +944,382 @@ public class InventoryServiceTests
         // 33.336 * 3 = 100.008 → redondeado a 100.01
         stats.TotalAmount.ShouldBe(100.01);
     }
+
+    // ═══════════════════════════════════════════════════════════
+    // ── GetShoppingList (ítems con stock bajo) ──────────────
+    // ═══════════════════════════════════════════════════════════
+
+    [TestMethod]
+    public async Task GetShoppingList_ReturnsOnlyItemsBelowMinStock()
+    {
+        var vendor = await CreateVendor();
+
+        // Item con stock suficiente — no debe aparecer
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Suficiente",
+            CurrentStock = 20,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        // Item con stock bajo — debe aparecer
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Faltante",
+            CurrentStock = 3,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        var list = await _service.GetShoppingList("user1");
+        list.Count.ShouldBe(1);
+        list[0].Name.ShouldBe("Faltante");
+    }
+
+    [TestMethod]
+    public async Task GetShoppingList_ExcludesItemsWithZeroMinStock()
+    {
+        var vendor = await CreateVendor();
+
+        // Item sin mínimo configurado — no debe aparecer aunque CurrentStock sea 0
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Sin minimo",
+            CurrentStock = 0,
+            MinStock = 0,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        var list = await _service.GetShoppingList("user1");
+        list.ShouldBeEmpty();
+    }
+
+    [TestMethod]
+    public async Task GetShoppingList_RespectsPrivacyFilter()
+    {
+        var vendor = await CreateVendor();
+
+        // Item privado de user1 con stock bajo
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Privado bajo",
+            CurrentStock = 1,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = true,
+            Creator = "user1"
+        });
+
+        // Item público con stock bajo
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Publico bajo",
+            CurrentStock = 2,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        // user1 ve ambos
+        var user1List = await _service.GetShoppingList("user1");
+        user1List.Count.ShouldBe(2);
+
+        // user2 solo ve el público
+        var user2List = await _service.GetShoppingList("user2");
+        user2List.Count.ShouldBe(1);
+        user2List[0].Name.ShouldBe("Publico bajo");
+    }
+
+    [TestMethod]
+    public async Task GetShoppingList_IsOrderedByVendorThenName()
+    {
+        var vendorA = await CreateVendor("Vendor A");
+        var vendorB = await CreateVendor("Vendor B");
+
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Zeta",
+            CurrentStock = 0,
+            MinStock = 5,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendorA.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Alfa",
+            CurrentStock = 0,
+            MinStock = 5,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendorA.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Beta",
+            CurrentStock = 1,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendorB.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        var list = await _service.GetShoppingList("user1");
+        list.Count.ShouldBe(3);
+
+        // Primero vendorA (Id menor), ordenados por nombre
+        list[0].Name.ShouldBe("Alfa");
+        list[1].Name.ShouldBe("Zeta");
+        // Luego vendorB
+        list[2].Name.ShouldBe("Beta");
+    }
+
+    [TestMethod]
+    public async Task GetShoppingList_ReturnsEmpty_WhenAllItemsHaveSufficientStock()
+    {
+        var vendor = await CreateVendor();
+
+        await _service.AddInvItem(new InvItemEntity
+        {
+            Name = "Ok",
+            CurrentStock = 50,
+            MinStock = 10,
+            CategoryId = 1,
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        });
+
+        var list = await _service.GetShoppingList("user1");
+        list.ShouldBeEmpty();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // ── GetInvItemPriceHistory ──────────────────────────────
+    // ═══════════════════════════════════════════════════════════
+
+    [TestMethod]
+    public async Task GetInvItemPriceHistory_ReturnsCorrectUnitPrice()
+    {
+        var order = await CreateParentOrder();
+        var item = await CreateItem(order.VendorId);
+
+        await _service.AddInvOrderSubEntity(new InvOrderSubEntity
+        {
+            ItemId = item.Id,
+            ItemCount = 4,
+            Amount = 100.00,
+            OrderId = order.Id
+        });
+
+        var history = await _service.GetInvItemPriceHistory(item.Id, "user1");
+        history.Count.ShouldBe(1);
+        history[0].UnitPrice.ShouldBe(25.00);
+        history[0].TotalAmount.ShouldBe(100.00);
+        history[0].ItemCount.ShouldBe(4);
+    }
+
+    [TestMethod]
+    public async Task GetInvItemPriceHistory_RoundsUnitPriceToTwoDecimals()
+    {
+        var order = await CreateParentOrder();
+        var item = await CreateItem(order.VendorId);
+
+        await _service.AddInvOrderSubEntity(new InvOrderSubEntity
+        {
+            ItemId = item.Id,
+            ItemCount = 3,
+            Amount = 100.00,
+            OrderId = order.Id
+        });
+
+        var history = await _service.GetInvItemPriceHistory(item.Id, "user1");
+        history.Count.ShouldBe(1);
+        // 100 / 3 = 33.333... → redondeado a 33.33
+        history[0].UnitPrice.ShouldBe(33.33);
+    }
+
+    [TestMethod]
+    public async Task GetInvItemPriceHistory_IgnoresZeroItemCount()
+    {
+        var order = await CreateParentOrder();
+        var item = await CreateItem(order.VendorId);
+
+        // Entrada con ItemCount == 0 — debe ignorarse
+        await _service.AddInvOrderSubEntity(new InvOrderSubEntity
+        {
+            ItemId = item.Id,
+            ItemCount = 0,
+            Amount = 50.00,
+            OrderId = order.Id
+        });
+
+        // Entrada válida
+        await _service.AddInvOrderSubEntity(new InvOrderSubEntity
+        {
+            ItemId = item.Id,
+            ItemCount = 2,
+            Amount = 80.00,
+            OrderId = order.Id
+        });
+
+        var history = await _service.GetInvItemPriceHistory(item.Id, "user1");
+        history.Count.ShouldBe(1);
+        history[0].UnitPrice.ShouldBe(40.00);
+    }
+
+    [TestMethod]
+    public async Task GetInvItemPriceHistory_RespectsPrivacyOfParentOrder()
+    {
+        var vendor = await CreateVendor();
+        var item = await CreateItem(vendor.Id);
+
+        // Orden pública de user1
+        var publicOrder = new InvOrderEntity
+        {
+            PurchaseDate = new DateTime(2026, 1, 10),
+            ReceptionDate = new DateTime(2026, 1, 20),
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = false,
+            Creator = "user1"
+        };
+        await _service.AddInvOrder(publicOrder);
+
+        // Orden privada de user1
+        var privateOrder = new InvOrderEntity
+        {
+            PurchaseDate = new DateTime(2026, 2, 10),
+            ReceptionDate = new DateTime(2026, 2, 20),
+            StatusId = 1,
+            VendorId = vendor.Id,
+            IsPrivate = true,
+            Creator = "user1"
+        };
+        await _service.AddInvOrder(privateOrder);
+
+        await _service.AddInvOrderSubEntity(new InvOrderSubEntity
+        {
+            ItemId = item.Id, ItemCount = 5, Amount = 50, OrderId = publicOrder.Id
+        });
+
+        await _service.AddInvOrderSubEntity(new InvOrderSubEntity
+        {
+            ItemId = item.Id, ItemCount = 3, Amount = 90, OrderId = privateOrder.Id
+        });
+
+        // user1 ve ambas
+        var user1History = await _service.GetInvItemPriceHistory(item.Id, "user1");
+        user1History.Count.ShouldBe(2);
+
+        // user2 solo ve la pública
+        var user2History = await _service.GetInvItemPriceHistory(item.Id, "user2");
+        user2History.Count.ShouldBe(1);
+        user2History[0].UnitPrice.ShouldBe(10.00);
+    }
+
+    [TestMethod]
+    public async Task GetInvItemPriceHistory_ReturnsEmptyWhenNoOrders()
+    {
+        var vendor = await CreateVendor();
+        var item = await CreateItem(vendor.Id);
+
+        var history = await _service.GetInvItemPriceHistory(item.Id, "user1");
+        history.ShouldBeEmpty();
+    }
+
+    [TestMethod]
+    public async Task GetInvItemPriceHistory_OnlyReturnsEntriesForGivenItem()
+    {
+        var order = await CreateParentOrder();
+        var itemA = await CreateItem(order.VendorId, "Item A");
+        var itemB = await CreateItem(order.VendorId, "Item B");
+
+        await _service.AddInvOrderSubEntity(new InvOrderSubEntity
+        {
+            ItemId = itemA.Id, ItemCount = 2, Amount = 40, OrderId = order.Id
+        });
+
+        await _service.AddInvOrderSubEntity(new InvOrderSubEntity
+        {
+            ItemId = itemB.Id, ItemCount = 5, Amount = 100, OrderId = order.Id
+        });
+
+        var historyA = await _service.GetInvItemPriceHistory(itemA.Id, "user1");
+        historyA.Count.ShouldBe(1);
+        historyA[0].UnitPrice.ShouldBe(20.00);
+
+        var historyB = await _service.GetInvItemPriceHistory(itemB.Id, "user1");
+        historyB.Count.ShouldBe(1);
+        historyB[0].UnitPrice.ShouldBe(20.00);
+    }
+
+    [TestMethod]
+    public async Task GetInvItemPriceHistory_OrderedByPurchaseDateDescending()
+    {
+        var vendor = await CreateVendor();
+        var item = await CreateItem(vendor.Id);
+
+        var olderOrder = new InvOrderEntity
+        {
+            PurchaseDate = new DateTime(2025, 6, 1),
+            ReceptionDate = new DateTime(2025, 6, 15),
+            StatusId = 1, VendorId = vendor.Id,
+            IsPrivate = false, Creator = "user1"
+        };
+        await _service.AddInvOrder(olderOrder);
+
+        var newerOrder = new InvOrderEntity
+        {
+            PurchaseDate = new DateTime(2026, 3, 1),
+            ReceptionDate = new DateTime(2026, 3, 15),
+            StatusId = 1, VendorId = vendor.Id,
+            IsPrivate = false, Creator = "user1"
+        };
+        await _service.AddInvOrder(newerOrder);
+
+        await _service.AddInvOrderSubEntity(new InvOrderSubEntity
+        {
+            ItemId = item.Id, ItemCount = 1, Amount = 10, OrderId = olderOrder.Id
+        });
+
+        await _service.AddInvOrderSubEntity(new InvOrderSubEntity
+        {
+            ItemId = item.Id, ItemCount = 1, Amount = 15, OrderId = newerOrder.Id
+        });
+
+        var history = await _service.GetInvItemPriceHistory(item.Id, "user1");
+        history.Count.ShouldBe(2);
+        // El más reciente primero
+        history[0].PurchaseDate.ShouldBe(new DateTime(2026, 3, 1));
+        history[1].PurchaseDate.ShouldBe(new DateTime(2025, 6, 1));
+    }
 }
 

@@ -12,7 +12,6 @@
         <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add Asset" OnClick="@(() => PopupCreate())" />
     </Sidebar>
     <SidebarBottom>
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-warehouse" Caption="Assets" OnClick="@(() => NavigateAssets())" />
         <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Code info" OnClick="@(() => NavigateCode())"/>
     </SidebarBottom>
     <Body>
@@ -142,11 +141,6 @@
     // Proyectos disponibles para enlace
     private IEnumerable<ProjectEntity> Projects = [];
     
-    private void NavigateAssets()
-    {
-        Nav.NavigateTo("/assets");
-    }
-
     private void NavigateCode()
     {
         Nav.NavigateTo("/assets/code");

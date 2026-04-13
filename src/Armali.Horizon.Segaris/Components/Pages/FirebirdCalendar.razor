@@ -10,8 +10,7 @@
     <Sidebar>
     </Sidebar>
     <SidebarBottom>
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-people-group" Caption="Table" OnClick="@FirebirdTable" />
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-calendar-days" Caption="Calendar" OnClick="@FyrebirdCalendar" />
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-people-group" Caption="People" OnClick="@FirebirdTable" />
     </SidebarBottom>
     <Body>
         <HorizonCalendarYear Year="@DateTime.Today.Year"
@@ -35,10 +34,5 @@
     private void FirebirdTable()
     {
         Nav.NavigateTo("/firebird");
-    }
-
-    private void FyrebirdCalendar()
-    {
-        Nav.NavigateTo("/firebird/calendar");
     }
 }

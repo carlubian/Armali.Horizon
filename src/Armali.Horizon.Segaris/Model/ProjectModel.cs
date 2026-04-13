@@ -89,3 +89,72 @@ public class ProjectStatus : Identifiable, Nameable, Colorable
     [Required]
     public string Color { get; set; } = string.Empty;
 }
+
+public class ProjectRiskCategory : Identifiable, Nameable
+{
+    public int Id { get; set; }
+    
+    [Required]
+    public string Name { get; set; } = string.Empty;
+}
+
+public class ProjectRiskElement
+{
+    public int Id { get; set; }
+    
+    [Required]
+    public string Name { get; set; } = string.Empty;
+    
+    public int CategoryId { get; set; }
+    [ForeignKey("CategoryId")]
+    public ProjectRiskCategory? Category { get; set; }
+    
+    [Required]
+    [Range(1, 10)]
+    public int Probability { get; set; } = 1;
+    
+    [Required]
+    [Range(1, 10)]
+    public int Severity { get; set; } = 1;
+    
+    [Required]
+    [Range(1, 10)]
+    public int Mitigation { get; set; } = 1;
+    
+    public int ProjectId { get; set; }
+    [ForeignKey("ProjectId")]
+    public ProjectEntity? Project { get; set; }
+    
+    /// <summary>
+    /// Score calculado: Probability × Severity × Mitigation. No se persiste en BD.
+    /// </summary>
+    [NotMapped]
+    public int Score => Probability * Severity * Mitigation;
+}
+
+public class ProjectBudget
+{
+    public int Id { get; set; }
+    
+    [Required]
+    [Range(2000, 2200)]
+    public int Year { get; set; } = DateTime.Today.Year;
+    
+    [Required]
+    public double Estimated { get; set; }
+    
+    [Required]
+    public double Actual { get; set; }
+    
+    public int ProjectId { get; set; }
+    [ForeignKey("ProjectId")]
+    public ProjectEntity? Project { get; set; }
+    
+    /// <summary>
+    /// Porcentaje del presupuesto estimado ya gastado: (Actual / Estimated) × 100.
+    /// Devuelve 0 si Estimated es 0 para evitar división por cero.
+    /// </summary>
+    [NotMapped]
+    public double SpentPercent => Estimated == 0 ? 0 : (Actual / Estimated) * 100;
+}
+
