@@ -1,0 +1,271 @@
+﻿@page "/expenses"
+
+@using Armali.Horizon.Segaris.Services
+@using Armali.Horizon.Segaris.Model
+
+@inject ExpenseService ExpenseService
+@inject IJSRuntime JS
+
+<HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="Refresh" />
+<HorizonLayout AppName="Segaris" PageName="Expenses">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-sol" Icon="fa-chevron-left" Caption="Year Back" OnClick="@(() => PreviousYear())" />
+        <HorizonHeroButton Color="hz-sol" Icon="fa-chevron-right" Caption="Year Fwd" OnClick="@(() => NextYear())" />
+    </Sidebar>
+    <SidebarBottom>
+        
+    </SidebarBottom>
+    <Body>
+    
+        <!-- Gráfico global: ingresos y gastos de todos los módulos por mes -->
+        <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+            <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                Global Income & Expenses — @CurrentYear
+            </div>
+            <div class="w-full h-60 mt-2">
+                <canvas id="chartGlobal"></canvas>
+            </div>
+        </div>
+        
+        <!-- Comparativa interanual del gasto total -->
+        <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+            <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                Year-over-Year Expenses — @(CurrentYear - 1) vs @CurrentYear
+            </div>
+            <div class="w-full h-60 mt-2">
+                <canvas id="chartYoy"></canvas>
+            </div>
+        </div>
+
+        <HorizonColumns>
+            <!-- Línea Capex por mes -->
+            <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+                <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                    Capex — Monthly
+                </div>
+                <div class="w-full h-60 mt-2">
+                    <canvas id="chartCapexLine"></canvas>
+                </div>
+            </div>
+            
+            <!-- Doughnut Capex por categoría -->
+            <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+                <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                    Capex — By Category
+                </div>
+                <div class="w-full h-60 mt-2">
+                    <canvas id="chartCapexPie"></canvas>
+                </div>
+            </div>
+        </HorizonColumns>
+        
+        <HorizonColumns>
+            <!-- Línea Opex por mes -->
+            <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+                <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                    Opex — Monthly
+                </div>
+                <div class="w-full h-60 mt-2">
+                    <canvas id="chartOpexLine"></canvas>
+                </div>
+            </div>
+            
+            <!-- Doughnut Opex por categoría -->
+            <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+                <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                    Opex — By Category
+                </div>
+                <div class="w-full h-60 mt-2">
+                    <canvas id="chartOpexPie"></canvas>
+                </div>
+            </div>
+        </HorizonColumns>
+        
+        <HorizonColumns>
+            <!-- Doughnut Inventory por vendedor -->
+            <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+                <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                    Inventory — By Vendor
+                </div>
+                <div class="w-full h-60 mt-2">
+                    <canvas id="chartInvVendor"></canvas>
+                </div>
+            </div>
+            
+            <!-- Doughnut Inventory por categoría de ítem -->
+            <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+                <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                    Inventory — By Item Category
+                </div>
+                <div class="w-full h-60 mt-2">
+                    <canvas id="chartInvCategory"></canvas>
+                </div>
+            </div>
+        </HorizonColumns>
+        
+        <HorizonColumns>
+            <!-- Línea Travel por mes -->
+            <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+                <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                    Travel — Monthly
+                </div>
+                <div class="w-full h-60 mt-2">
+                    <canvas id="chartTravelLine"></canvas>
+                </div>
+            </div>
+            
+            <!-- Doughnut Travel por categoría de gasto -->
+            <div class="rounded-xl bg-hz-styx p-3 shadow-xl mb-4">
+                <div class="text-center font-hz-header text-lg text-hz-arendelle border-b border-gray-600 pb-1">
+                    Travel — By Expense Category
+                </div>
+                <div class="w-full h-60 mt-2">
+                    <canvas id="chartTravelPie"></canvas>
+                </div>
+            </div>
+        </HorizonColumns>
+        
+    </Body>
+</HorizonLayout>
+
+@code {
+    private string CurrentUser = string.Empty;
+    private int CurrentYear = DateTime.Today.Year;
+    
+    // Datos mensuales por módulo
+    private List<MonthlyAggregate> CapexMonthly = [];
+    private List<MonthlyAggregate> OpexMonthly = [];
+    private List<MonthlyAggregate> TravelMonthly = [];
+    private List<MonthlyAggregate> InventoryMonthly = [];
+    
+    // Datos mensuales del año anterior (para YoY)
+    private List<MonthlyAggregate> PrevCapexMonthly = [];
+    private List<MonthlyAggregate> PrevOpexMonthly = [];
+    private List<MonthlyAggregate> PrevTravelMonthly = [];
+    private List<MonthlyAggregate> PrevInventoryMonthly = [];
+    
+    // Datos por categoría
+    private List<CategoryAggregate> CapexCategories = [];
+    private List<CategoryAggregate> OpexCategories = [];
+    private List<CategoryAggregate> TravelCategories = [];
+    private List<CategoryAggregate> InvVendors = [];
+    private List<CategoryAggregate> InvItemCategories = [];
+    
+    private static readonly string[] MonthLabels =
+        ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    private async Task PreviousYear()
+    {
+        CurrentYear--;
+        await Refresh();
+    }
+
+    private async Task NextYear()
+    {
+        CurrentYear++;
+        await Refresh();
+    }
+
+    private async Task Refresh()
+    {
+        // Cargar datos del año actual en paralelo
+        var capexTask = ExpenseService.GetCapexMonthly(CurrentYear, CurrentUser);
+        var opexTask = ExpenseService.GetOpexMonthly(CurrentYear, CurrentUser);
+        var travelTask = ExpenseService.GetTravelMonthly(CurrentYear, CurrentUser);
+        var invTask = ExpenseService.GetInventoryMonthly(CurrentYear, CurrentUser);
+        
+        var capexCatTask = ExpenseService.GetCapexByCategory(CurrentYear, CurrentUser);
+        var opexCatTask = ExpenseService.GetOpexByCategory(CurrentYear, CurrentUser);
+        var travelCatTask = ExpenseService.GetTravelByExpenseCategory(CurrentYear, CurrentUser);
+        var invVendorTask = ExpenseService.GetInventoryByVendor(CurrentYear, CurrentUser);
+        var invCatTask = ExpenseService.GetInventoryByItemCategory(CurrentYear, CurrentUser);
+        
+        // Datos del año anterior para comparativa
+        var prevCapexTask = ExpenseService.GetCapexMonthly(CurrentYear - 1, CurrentUser);
+        var prevOpexTask = ExpenseService.GetOpexMonthly(CurrentYear - 1, CurrentUser);
+        var prevTravelTask = ExpenseService.GetTravelMonthly(CurrentYear - 1, CurrentUser);
+        var prevInvTask = ExpenseService.GetInventoryMonthly(CurrentYear - 1, CurrentUser);
+        
+        await Task.WhenAll(capexTask, opexTask, travelTask, invTask,
+            capexCatTask, opexCatTask, travelCatTask, invVendorTask, invCatTask,
+            prevCapexTask, prevOpexTask, prevTravelTask, prevInvTask);
+        
+        CapexMonthly = capexTask.Result;
+        OpexMonthly = opexTask.Result;
+        TravelMonthly = travelTask.Result;
+        InventoryMonthly = invTask.Result;
+        
+        PrevCapexMonthly = prevCapexTask.Result;
+        PrevOpexMonthly = prevOpexTask.Result;
+        PrevTravelMonthly = prevTravelTask.Result;
+        PrevInventoryMonthly = prevInvTask.Result;
+        
+        CapexCategories = capexCatTask.Result;
+        OpexCategories = opexCatTask.Result;
+        TravelCategories = travelCatTask.Result;
+        InvVendors = invVendorTask.Result;
+        InvItemCategories = invCatTask.Result;
+        
+        await RenderAllCharts();
+        StateHasChanged();
+    }
+
+    private async Task RenderAllCharts()
+    {
+        // ── Global (suma de los 4 módulos) ───────────────────────────
+        var globalIncome = Enumerable.Range(0, 12)
+            .Select(i => Math.Round(
+                CapexMonthly[i].Income + OpexMonthly[i].Income +
+                TravelMonthly[i].Income + InventoryMonthly[i].Income, 2))
+            .ToArray();
+        var globalExpense = Enumerable.Range(0, 12)
+            .Select(i => Math.Round(
+                CapexMonthly[i].Expense + OpexMonthly[i].Expense +
+                TravelMonthly[i].Expense + InventoryMonthly[i].Expense, 2))
+            .ToArray();
+        await JS.InvokeVoidAsync("renderExpenseLineChart", "chartGlobal",
+            MonthLabels, globalIncome, globalExpense);
+        
+        // ── Year-over-Year (gasto total mensual: año anterior vs actual) ─
+        var prevTotalExpense = Enumerable.Range(0, 12)
+            .Select(i => Math.Round(
+                PrevCapexMonthly[i].Expense + PrevOpexMonthly[i].Expense +
+                PrevTravelMonthly[i].Expense + PrevInventoryMonthly[i].Expense, 2))
+            .ToArray();
+        await JS.InvokeVoidAsync("renderExpenseYoyChart", "chartYoy",
+            MonthLabels, prevTotalExpense, globalExpense, CurrentYear - 1, CurrentYear);
+        
+        // ── Capex ────────────────────────────────────────────────────
+        await JS.InvokeVoidAsync("renderExpenseLineChart", "chartCapexLine",
+            MonthLabels,
+            CapexMonthly.Select(m => m.Income).ToArray(),
+            CapexMonthly.Select(m => m.Expense).ToArray());
+        await RenderPie("chartCapexPie", CapexCategories);
+        
+        // ── Opex ─────────────────────────────────────────────────────
+        await JS.InvokeVoidAsync("renderExpenseLineChart", "chartOpexLine",
+            MonthLabels,
+            OpexMonthly.Select(m => m.Income).ToArray(),
+            OpexMonthly.Select(m => m.Expense).ToArray());
+        await RenderPie("chartOpexPie", OpexCategories);
+        
+        // ── Inventory ────────────────────────────────────────────────
+        await RenderPie("chartInvVendor", InvVendors);
+        await RenderPie("chartInvCategory", InvItemCategories);
+        
+        // ── Travel ───────────────────────────────────────────────────
+        await JS.InvokeVoidAsync("renderExpenseLineChart", "chartTravelLine",
+            MonthLabels,
+            TravelMonthly.Select(m => m.Income).ToArray(),
+            TravelMonthly.Select(m => m.Expense).ToArray());
+        await RenderPie("chartTravelPie", TravelCategories);
+    }
+
+    private async Task RenderPie(string canvasId, List<CategoryAggregate> data)
+    {
+        await JS.InvokeVoidAsync("renderExpensePieChart", canvasId,
+            data.Select(c => c.Name).ToArray(),
+            data.Select(c => c.Total).ToArray());
+    }
+}
+
