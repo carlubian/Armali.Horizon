@@ -1,7 +1,6 @@
 ﻿@page "/mood"
 
 @using Armali.Horizon.Segaris.Services
-@using Microsoft.JSInterop
 
 @inject MoodService MoodService
 @inject IJSRuntime JS
@@ -15,7 +14,8 @@
         <HorizonHeroButton Color="hz-sol" Icon="fa-chevron-right" Caption="Week Fwd" OnClick="@(() => NextWeek())" />
     </Sidebar>
     <SidebarBottom>
-        <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Mood Info" OnClick="@(() => Info())" />
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-chart-line" Caption="Trends" OnClick="@(() => Trends())" />
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-circle-info" Caption="Mood Info" OnClick="@(() => Info())"/>
     </SidebarBottom>
     <Body>
     
@@ -137,6 +137,11 @@
     {
         CurrentWeekStart = CurrentWeekStart.AddDays(7);
         await Refresh();
+    }
+    
+    private void Trends()
+    {
+        Nav.NavigateTo("/mood/trends");
     }
     
     private void Info()

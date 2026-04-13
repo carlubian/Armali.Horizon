@@ -35,6 +35,7 @@ public class Program
         builder.Services.AddScoped<FirebirdService>();
         builder.Services.AddScoped<ClothesService>();
         builder.Services.AddScoped<MoodService>();
+        builder.Services.AddScoped<ExpenseService>();
 
         var app = builder.Build();
 
