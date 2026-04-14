@@ -90,3 +90,130 @@ When adding a new module, replicate this triple and register the service in `Pro
 - **C# 14 extensions**: `src/Armali.Horizon.Core/Linq/HorizonExtensions.cs` uses the new `extension<T>` syntax (requires .NET 10 / C# 14).
 - **Comments and docs in Spanish**: inline code comments are written in Spanish; public API summaries may be in either language.
 
+## Inter-Process Communication (Armali.Horizon.IO)
+
+### Overview
+
+`Armali.Horizon.IO` provides a Redis pub/sub messaging layer with Zstd-compressed payloads. It supports two communication patterns:
+
+| Pattern | Use case |
+|---|---|
+| **Fire-and-forget** | `PublishAsync<T>` + `Subscribe<T>` — emit events without expecting a reply |
+| **Request/Response** | `RequestAsync<TResponse>` (caller) + `IHorizonRequestHandler<TReq,TRes>` (responder) — send a request and await a typed response with timeout |
+
+Every message travels inside a `HorizonEvent` envelope:
+```
+HorizonEvent
+├── EventId        (Guid — unique per message)
+├── EventType      (string — identifies the operation, e.g. "autoconfig.nodes.get")
+├── Payload        (byte[] — Zstd-compressed, JSON-serialized payload)
+├── CorrelationId  (Guid? — links a request to its response; null for fire-and-forget)
+└── ReplyTo        (string? — Redis channel for the response; null for fire-and-forget)
+```
+
+### Configuration
+
+Add to `appsettings.json`:
+```json
+{
+  "Horizon": {
+    "Events": {
+      "Endpoint": "localhost:6379",
+      "DefaultTimeoutSeconds": 10
+    }
+  }
+}
+```
+
+### Registering the event system
+
+In `Program.cs`, call `UseHorizonEvents()` on the host builder:
+
+```csharp
+// Requester only (fire-and-forget + RequestAsync, no handlers):
+builder.Host.UseHorizonEvents();
+
+// Responder with handlers:
+builder.Host.UseHorizonEvents(events =>
+{
+    events.HandleRequest<GetNodesHandler, GetNodesRequest, GetNodesResponse>("autoconfig");
+    events.HandleRequest<GetAppsHandler, GetAppsRequest, GetAppsResponse>("autoconfig");
+});
+```
+
+`HorizonEventService` is registered as a singleton and can be injected directly into any service or page.
+
+### Defining payloads (models)
+
+Each operation needs a request and a response class implementing `IHorizonEventPayload`. The `EventType` string is the key that routes requests to the correct handler.
+
+```csharp
+// ── Request ──
+public class GetNodesRequest : IHorizonEventPayload
+{
+    public string EventType => "autoconfig.nodes.get";
+}
+
+// ── Response ──
+public class GetNodesResponse : IHorizonEventPayload
+{
+    public string EventType => "autoconfig.nodes.get:response";
+    public List<AutoconfigNode> Nodes { get; set; } = [];
+}
+```
+
+**Convention**: use `"service.resource.action"` for request EventType, and append `":response"` for the response EventType.
+
+### Implementing a handler (responder side)
+
+```csharp
+public class GetNodesHandler : IHorizonRequestHandler<GetNodesRequest, GetNodesResponse>
+{
+    private readonly AutoconfigService Svc;
+    public GetNodesHandler(AutoconfigService svc) => Svc = svc;
+
+    public async Task<GetNodesResponse> HandleAsync(GetNodesRequest request, CancellationToken ct = default)
+    {
+        var nodes = await Svc.GetNodes();
+        return new GetNodesResponse { Nodes = nodes };
+    }
+}
+```
+
+Handlers are resolved from DI with a **new scope per request**, so they can safely inject scoped services like `AutoconfigService`.
+
+### Sending a request (caller side)
+
+```csharp
+// Inject HorizonEventService in your service or page
+var response = await EventService.RequestAsync<GetNodesResponse>(
+    "autoconfig",                   // Redis channel
+    new GetNodesRequest(),          // request payload
+    TimeSpan.FromSeconds(5));       // optional timeout override
+
+var nodes = response.Nodes;         // typed result
+```
+
+### Adding a new operation (checklist)
+
+1. **Define request + response payload classes** implementing `IHorizonEventPayload` (request needs parameterless constructor)
+2. **Implement `IHorizonRequestHandler<TReq, TRes>`** with the business logic
+3. **Register** the handler in `UseHorizonEvents(events => { events.HandleRequest<...>(...); })`
+4. **Call** `RequestAsync<TResponse>(channel, request)` from the caller side
+
+No changes to the IO library itself are needed — only new model classes and handler implementations.
+
+### Fire-and-forget usage
+
+```csharp
+// Publisher
+await eventService.PublishAsync("notifications", new AlertPayload { ... });
+
+// Subscriber (call once, e.g. in StartAsync or OnInitialized)
+eventService.Subscribe<AlertPayload>("notifications", payload =>
+{
+    Console.WriteLine($"Alert: {payload.Message}");
+});
+```
+
+
