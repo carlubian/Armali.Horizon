@@ -78,3 +78,15 @@ public class AutoconfigFile : Nameable
     [ForeignKey("VersionId")]
     public AutoconfigVersion? Version { get; set; }
 }
+
+/// <summary>
+/// DTO con los nombres resueltos de la jerarquía Nodo → App → Versión.
+/// Se usa para construir las rutas del Datalake.
+/// </summary>
+public class VersionContext
+{
+    public string NodeName { get; set; } = string.Empty;
+    public string AppName { get; set; } = string.Empty;
+    public string VersionName { get; set; } = string.Empty;
+}
+

@@ -13,7 +13,9 @@ public class AutoconfigServiceTests
     public void Setup()
     {
         _factory = new TestDbContextFactory();
-        _service = new AutoconfigService(_factory);
+        // AutoconfigDatalakeService es null — solo se testean operaciones de DB.
+        // Los deletes no invocan el Datalake si no hay ficheros asociados.
+        _service = new AutoconfigService(_factory, null!);
     }
 
     [TestCleanup]

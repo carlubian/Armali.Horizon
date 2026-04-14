@@ -32,10 +32,12 @@ public abstract class BlazorTestBase : BunitContext
         JSInterop.Setup<string>("localStorage.getItem", "Horizon:Session")
             .SetResult(JsonSerializer.Serialize(identity));
 
-        // Registrar servicios — misma DI que Program.cs pero con TestDbContextFactory
+        // Registrar servicios — misma DI que Program.cs pero con TestDbContextFactory.
+        // AutoconfigDatalakeService es null — solo se testean operaciones de DB.
         Services.AddSingleton<IDbContextFactory<AutoconfigDbContext>>(DbFactory);
         Services.AddScoped<HorizonSessionService>();
-        Services.AddScoped<AutoconfigService>();
+        Services.AddScoped<AutoconfigService>(sp =>
+            new AutoconfigService(sp.GetRequiredService<IDbContextFactory<AutoconfigDbContext>>(), null!));
     }
 
     [TestCleanup]

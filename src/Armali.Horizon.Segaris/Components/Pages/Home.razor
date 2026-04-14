@@ -15,16 +15,18 @@
         <SegarisCard Title="CAPEX" Image="/images/capex.png" OnClick="@Capex" />
         <SegarisCard Title="OPEX" Image="/images/opex.png" OnClick="@Opex" />
         <SegarisCard Title="INVENTORY" Image="/images/inventory.png" OnClick="@Inventory" />
-        <SegarisCard Title="ASSETS" Image="/images/assets.png" OnClick="@Assets" />
-        
         <SegarisCard Title="TRAVEL" Image="/images/travel.png" OnClick="@Travel" />
-        <SegarisCard Title="PROJECTS" Image="/images/task.png" OnClick="@Projects" />
-        <SegarisCard Title="ARCHIVE" Image="/images/archive.png" OnClick="@Archive" />
-        <SegarisCard Title="MAINTENANCE" Image="/images/maintenance.png" OnClick="@Maintenance" />
         
+        <SegarisCard Title="ASSETS" Image="/images/assets.png" OnClick="@Assets" />
+        <SegarisCard Title="MAINTENANCE" Image="/images/maintenance.png" OnClick="@Maintenance" />
+        <SegarisCard Title="PROJECTS" Image="/images/task.png" OnClick="@Projects" />
+        <SegarisCard Title="PROCESSES" Image="/images/admin.png" OnClick="@Admin" />
+        
+        <SegarisCard Title="ARCHIVE" Image="/images/archive.png" OnClick="@Archive" />
         <SegarisCard Title="FIREBIRD" Image="/images/phoenix.png" OnClick="@Firebird" />
         <SegarisCard Title="CLOTHES" Image="/images/clothes.png" OnClick="@Clothes" />
         <SegarisCard Title="MOOD" Image="/images/mood.png" OnClick="@Mood" />
+        
         <SegarisCard Title="ANALYTICS" Image="/images/chart.png" OnClick="@Analytics" />
         
     </div>
@@ -106,5 +108,10 @@
     private void Analytics()
     {
         Nav.NavigateTo("/expenses");
+    }
+    
+    private void Admin()
+    {
+        Nav.NavigateTo("/admin");
     }
 }
