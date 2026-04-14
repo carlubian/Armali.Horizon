@@ -75,6 +75,11 @@ public class SegarisDbContext(DbContextOptions<SegarisDbContext> options) : DbCo
     public DbSet<ClothesEntity> ClothesEntities { get; set; }
     public DbSet<ClothesColorAssignment> ClothesColorAssignments { get; set; }
     
+    // ADMIN module
+    public DbSet<AdminCategory> AdminCategories { get; set; }
+    public DbSet<AdminEntity> AdminEntities { get; set; }
+    public DbSet<AdminSubEntity> AdminSubEntities { get; set; }
+    
     // MOOD module
     public DbSet<MoodCategory> MoodCategories { get; set; }
     public DbSet<MoodEntity> MoodEntities { get; set; }
@@ -414,6 +419,18 @@ public class SegarisDbContext(DbContextOptions<SegarisDbContext> options) : DbCo
             new ClothesColor { Id = 34, Name = "Slate", Reference = "#5D6770" },
             new ClothesColor { Id = 35, Name = "Anthracite", Reference = "#383E42" },
             new ClothesColor { Id = 36, Name = "Cordovan", Reference = "#3B2A21" }
+        );
+        
+        // ADMIN module seed data
+        modelBuilder.Entity<AdminCategory>().HasData(
+            new AdminCategory { Id = 1, Name = "Government" },
+            new AdminCategory { Id = 2, Name = "Employment" },
+            new AdminCategory { Id = 3, Name = "Banking" },
+            new AdminCategory { Id = 4, Name = "Insurance" },
+            new AdminCategory { Id = 5, Name = "Legal" },
+            new AdminCategory { Id = 6, Name = "Housing" },
+            new AdminCategory { Id = 7, Name = "Vehicles" },
+            new AdminCategory { Id = 8, Name = "Other" }
         );
         
         // MOOD module seed data
