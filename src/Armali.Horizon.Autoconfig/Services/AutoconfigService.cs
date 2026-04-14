@@ -1,4 +1,5 @@
-﻿using Armali.Horizon.Autoconfig.Model;
+﻿using System.Text;
+using Armali.Horizon.Autoconfig.Model;
 using Microsoft.EntityFrameworkCore;
 
 namespace Armali.Horizon.Autoconfig.Services;
@@ -6,10 +7,12 @@ namespace Armali.Horizon.Autoconfig.Services;
 public class AutoconfigService
 {
     private readonly IDbContextFactory<AutoconfigDbContext> Factory;
+    private readonly AutoconfigDatalakeService DatalakeService;
 
-    public AutoconfigService(IDbContextFactory<AutoconfigDbContext> factory)
+    public AutoconfigService(IDbContextFactory<AutoconfigDbContext> factory, AutoconfigDatalakeService datalakeService)
     {
         Factory = factory;
+        DatalakeService = datalakeService;
     }
     
     public async Task<List<AutoconfigNode>> GetNodes()
@@ -25,9 +28,6 @@ public class AutoconfigService
         await using var context = Factory.CreateDbContext();
         var result = new NodeStats();
         
-        // Fill the result as follows:
-        // AppCount is the sum of apps linked to this node
-        // TotalKbSize is the sum of all file sizes linked to this node (through apps and versions)
         result.AppCount = await context.Apps
             .Where(a => a.NodeId == nodeId)
             .AsNoTracking()
@@ -64,11 +64,28 @@ public class AutoconfigService
     {
         await using var context = Factory.CreateDbContext();
         var Entity = await context.Nodes.FindAsync(id);
-        if (Entity != null)
+        if (Entity == null) return;
+        
+        // Obtener todas las apps de este nodo para limpiar el Datalake
+        var Apps = await context.Apps.Where(a => a.NodeId == id).AsNoTracking().ToListAsync();
+        foreach (var app in Apps)
         {
-            context.Nodes.Remove(Entity);
-            await context.SaveChangesAsync();
+            var Versions = await context.Versions.Where(v => v.AppId == app.Id).AsNoTracking().ToListAsync();
+            foreach (var version in Versions)
+            {
+                var Files = await context.Files.Where(f => f.VersionId == version.Id).ToListAsync();
+                foreach (var file in Files)
+                {
+                    await DatalakeService.DeleteFileAsync(Entity.Name, app.Name, version.Name, file.Name);
+                }
+                context.Files.RemoveRange(Files);
+            }
+            context.Versions.RemoveRange(await context.Versions.Where(v => v.AppId == app.Id).ToListAsync());
         }
+        context.Apps.RemoveRange(await context.Apps.Where(a => a.NodeId == id).ToListAsync());
+        
+        context.Nodes.Remove(Entity);
+        await context.SaveChangesAsync();
     }
     
     public async Task<List<AutoconfigApp>> GetApps()
@@ -84,9 +101,6 @@ public class AutoconfigService
         await using var context = Factory.CreateDbContext();
         var result = new AppStats();
         
-        // Fill the result as follows:
-        // VersionCount is the sum of versions linked to this node
-        // TotalKbSize is the sum of all file sizes linked to this app (through versions)
         result.VersionCount = await context.Versions
             .Where(a => a.AppId == appId)
             .AsNoTracking()
@@ -129,11 +143,27 @@ public class AutoconfigService
     {
         await using var context = Factory.CreateDbContext();
         var Entity = await context.Apps.FindAsync(id);
-        if (Entity != null)
+        if (Entity == null) return;
+        
+        // Resolver nombre del nodo para rutas del Datalake
+        var Node = await context.Nodes.AsNoTracking().FirstOrDefaultAsync(n => n.Id == Entity.NodeId);
+        
+        // Eliminar ficheros del Datalake y de la BD para todas las versiones
+        var Versions = await context.Versions.Where(v => v.AppId == id).AsNoTracking().ToListAsync();
+        foreach (var version in Versions)
         {
-            context.Apps.Remove(Entity);
-            await context.SaveChangesAsync();
+            var Files = await context.Files.Where(f => f.VersionId == version.Id).ToListAsync();
+            foreach (var file in Files)
+            {
+                if (Node != null)
+                    await DatalakeService.DeleteFileAsync(Node.Name, Entity.Name, version.Name, file.Name);
+            }
+            context.Files.RemoveRange(Files);
         }
+        context.Versions.RemoveRange(await context.Versions.Where(v => v.AppId == id).ToListAsync());
+        
+        context.Apps.Remove(Entity);
+        await context.SaveChangesAsync();
     }
     
     public async Task<List<AutoconfigVersion>> GetVersions()
@@ -177,12 +207,28 @@ public class AutoconfigService
     {
         await using var context = Factory.CreateDbContext();
         var Entity = await context.Versions.FindAsync(id);
-        if (Entity != null)
+        if (Entity == null) return;
+        
+        // Resolver nombres para rutas del Datalake
+        var App = await context.Apps.AsNoTracking().FirstOrDefaultAsync(a => a.Id == Entity.AppId);
+        var Node = App != null 
+            ? await context.Nodes.AsNoTracking().FirstOrDefaultAsync(n => n.Id == App.NodeId) 
+            : null;
+        
+        // Eliminar ficheros del Datalake y de la BD
+        var Files = await context.Files.Where(f => f.VersionId == id).ToListAsync();
+        foreach (var file in Files)
         {
-            context.Versions.Remove(Entity);
-            await context.SaveChangesAsync();
+            if (Node != null && App != null)
+                await DatalakeService.DeleteFileAsync(Node.Name, App.Name, Entity.Name, file.Name);
         }
+        context.Files.RemoveRange(Files);
+        
+        context.Versions.Remove(Entity);
+        await context.SaveChangesAsync();
     }
+    
+    // ── Files ──────────────────────────────────────────────────
     
     public async Task<List<AutoconfigFile>> GetFiles()
     {
@@ -199,5 +245,93 @@ public class AutoconfigService
             .Where(a => a.VersionId == versionId)
             .AsNoTracking()
             .ToListAsync();
+    }
+    
+    public async Task<AutoconfigFile?> GetFileById(int fileId)
+    {
+        await using var context = Factory.CreateDbContext();
+        return await context.Files
+            .AsNoTracking()
+            .FirstOrDefaultAsync(f => f.Id == fileId);
+    }
+    
+    /// <summary>
+    /// Resuelve los nombres de la jerarquía Nodo → App → Versión a partir del VersionId.
+    /// </summary>
+    public async Task<VersionContext?> GetVersionContext(int versionId)
+    {
+        await using var context = Factory.CreateDbContext();
+        var Version = await context.Versions.AsNoTracking().FirstOrDefaultAsync(v => v.Id == versionId);
+        if (Version == null) return null;
+        
+        var App = await context.Apps.AsNoTracking().FirstOrDefaultAsync(a => a.Id == Version.AppId);
+        if (App == null) return null;
+        
+        var Node = await context.Nodes.AsNoTracking().FirstOrDefaultAsync(n => n.Id == App.NodeId);
+        if (Node == null) return null;
+        
+        return new VersionContext
+        {
+            NodeName = Node.Name,
+            AppName = App.Name,
+            VersionName = Version.Name
+        };
+    }
+    
+    /// <summary>
+    /// Añade un fichero: inserta el registro en BD y sube el contenido al Datalake.
+    /// </summary>
+    public async Task AddFile(AutoconfigFile entity, Stream content, VersionContext ctx)
+    {
+        await DatalakeService.UploadFileAsync(content, ctx.NodeName, ctx.AppName, ctx.VersionName, entity.Name);
+        
+        await using var context = Factory.CreateDbContext();
+        context.Files.Add(entity);
+        await context.SaveChangesAsync();
+    }
+    
+    /// <summary>
+    /// Elimina un fichero: borra del Datalake y del registro en BD.
+    /// </summary>
+    public async Task DeleteFile(int fileId, VersionContext ctx)
+    {
+        await using var context = Factory.CreateDbContext();
+        var Entity = await context.Files.FindAsync(fileId);
+        if (Entity == null) return;
+        
+        await DatalakeService.DeleteFileAsync(ctx.NodeName, ctx.AppName, ctx.VersionName, Entity.Name);
+        
+        context.Files.Remove(Entity);
+        await context.SaveChangesAsync();
+    }
+    
+    /// <summary>
+    /// Descarga el contenido de un fichero del Datalake como texto UTF-8.
+    /// </summary>
+    public async Task<string> GetFileContent(VersionContext ctx, string fileName)
+    {
+        var FileStream = await DatalakeService.GetFileAsync(ctx.NodeName, ctx.AppName, ctx.VersionName, fileName);
+        using var Reader = new StreamReader(FileStream, Encoding.UTF8);
+        return await Reader.ReadToEndAsync();
+    }
+    
+    /// <summary>
+    /// Sobrescribe el contenido de un fichero en el Datalake y actualiza KbSize en BD.
+    /// </summary>
+    public async Task UpdateFileContent(int fileId, string content, VersionContext ctx, string fileName)
+    {
+        var Bytes = Encoding.UTF8.GetBytes(content);
+        await using var Stream = new MemoryStream(Bytes);
+        await DatalakeService.UploadFileAsync(Stream, ctx.NodeName, ctx.AppName, ctx.VersionName, fileName);
+        
+        // Actualizar tamaño en BD
+        await using var context = Factory.CreateDbContext();
+        var Entity = await context.Files.FindAsync(fileId);
+        if (Entity != null)
+        {
+            Entity.KbSize = Bytes.Length / 1024;
+            context.Files.Update(Entity);
+            await context.SaveChangesAsync();
+        }
     }
 }

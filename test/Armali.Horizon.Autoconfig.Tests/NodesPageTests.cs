@@ -39,7 +39,7 @@ public class NodesPageTests : BlazorTestBase
     public async Task Page_ShowsNodesInTable()
     {
         // Arrange: insertar un nodo de prueba
-        var service = new AutoconfigService(DbFactory);
+        var service = new AutoconfigService(DbFactory, null!);
         await service.AddNode(new AutoconfigNode
         {
             Name = "Node Alpha",
@@ -59,7 +59,7 @@ public class NodesPageTests : BlazorTestBase
     [TestMethod]
     public async Task Page_ShowsMultipleNodes()
     {
-        var service = new AutoconfigService(DbFactory);
+        var service = new AutoconfigService(DbFactory, null!);
         await service.AddNode(new AutoconfigNode { Name = "Node A", Uri = "https://a.test" });
         await service.AddNode(new AutoconfigNode { Name = "Node B", Uri = "https://b.test" });
 
@@ -112,7 +112,7 @@ public class NodesPageTests : BlazorTestBase
     [TestMethod]
     public async Task DeleteButton_Click_ShowsConfirmation()
     {
-        var service = new AutoconfigService(DbFactory);
+        var service = new AutoconfigService(DbFactory, null!);
         await service.AddNode(new AutoconfigNode
         {
             Name = "To Delete Node",
@@ -139,7 +139,7 @@ public class NodesPageTests : BlazorTestBase
     [TestMethod]
     public async Task EditButton_Click_ShowsEditPopup()
     {
-        var service = new AutoconfigService(DbFactory);
+        var service = new AutoconfigService(DbFactory, null!);
         await service.AddNode(new AutoconfigNode
         {
             Name = "Editable Node",
@@ -165,7 +165,7 @@ public class NodesPageTests : BlazorTestBase
     [TestMethod]
     public async Task Page_ShowsNodeStats()
     {
-        var service = new AutoconfigService(DbFactory);
+        var service = new AutoconfigService(DbFactory, null!);
         await service.AddNode(new AutoconfigNode { Name = "Stats Node", Uri = "https://stats.test" });
 
         var cut = Render<Nodes>();
