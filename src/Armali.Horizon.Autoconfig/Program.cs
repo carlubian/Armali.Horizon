@@ -1,14 +1,22 @@
 using Armali.Horizon.Autoconfig;
 using Armali.Horizon.Autoconfig.Components;
+using Armali.Horizon.Autoconfig.Model;
 using Armali.Horizon.Autoconfig.Services;
 using Armali.Horizon.Blazor.Services;
 using Armali.Horizon.Core.Logs;
+using Armali.Horizon.IO;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Logging centralizado con Serilog + Seq
 builder.Host.UseHorizonLogging();
+
+// Eventos Horizon con handlers de request/response
+builder.Host.UseHorizonEvents(events =>
+{
+    events.HandleRequest<FindFileHandler, FindFileRequest, FindFileResponse>("autoconfig");
+});
 
 // Add services to the container.
 builder.Services.AddRazorComponents()

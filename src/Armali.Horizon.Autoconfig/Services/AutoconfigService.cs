@@ -334,4 +334,79 @@ public class AutoconfigService
             await context.SaveChangesAsync();
         }
     }
+    
+    // ── FindValidFile ──────────────────────────────────────────
+    
+    /// <summary>
+    /// Busca un fichero de configuración aplicando fallback de versión compatible:
+    /// 1) Coincidencia exacta de Major.Minor.Patch
+    /// 2) Misma Major.Minor, versión más reciente (desc por Patch)
+    /// 3) Misma Major, versión más reciente (desc por Minor, Patch)
+    /// No cruza entre distintas Major ya que se consideran incompatibles.
+    /// </summary>
+    public async Task<FindFileResult?> FindValidFile(string nodeName, string appName, string version, string fileName)
+    {
+        // Parsear versión solicitada
+        var Parts = version.Split('.');
+        if (Parts.Length != 3
+            || !int.TryParse(Parts[0], out var Major)
+            || !int.TryParse(Parts[1], out var Minor)
+            || !int.TryParse(Parts[2], out var Patch))
+            return null;
+        
+        await using var context = Factory.CreateDbContext();
+        
+        // Resolver Node y App por nombre
+        var Node = await context.Nodes.AsNoTracking().FirstOrDefaultAsync(n => n.Name == nodeName);
+        if (Node == null) return null;
+        
+        var App = await context.Apps.AsNoTracking().FirstOrDefaultAsync(a => a.Name == appName && a.NodeId == Node.Id);
+        if (App == null) return null;
+        
+        // Obtener todas las versiones de esta App con la misma Major, ordenadas de más reciente a más antigua
+        var Candidates = await context.Versions
+            .Where(v => v.AppId == App.Id && v.Major == Major)
+            .OrderByDescending(v => v.Minor)
+            .ThenByDescending(v => v.Patch)
+            .AsNoTracking()
+            .ToListAsync();
+        
+        if (Candidates.Count == 0) return null;
+        
+        // Estrategia de búsqueda en cascada: exacta → Major.Minor → Major
+        var SearchPasses = new List<Func<AutoconfigVersion, bool>>
+        {
+            v => v.Major == Major && v.Minor == Minor && v.Patch == Patch,
+            v => v.Major == Major && v.Minor == Minor,
+            v => v.Major == Major
+        };
+        
+        foreach (var Predicate in SearchPasses)
+        {
+            foreach (var Candidate in Candidates.Where(Predicate))
+            {
+                var File = await context.Files
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(f => f.VersionId == Candidate.Id && f.Name == fileName);
+                
+                if (File == null) continue;
+                
+                // Fichero encontrado — descargar contenido del Datalake
+                var Ctx = new VersionContext
+                {
+                    NodeName = Node.Name,
+                    AppName = App.Name,
+                    VersionName = Candidate.Name
+                };
+                var Content = await GetFileContent(Ctx, fileName);
+                return new FindFileResult
+                {
+                    Content = Content,
+                    ResolvedVersion = Candidate.Name
+                };
+            }
+        }
+        
+        return null;
+    }
 }

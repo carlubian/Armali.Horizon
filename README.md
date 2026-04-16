@@ -24,8 +24,21 @@ and the commit tag. The versioning scheme follows semantic versioning (e.g., "1.
 Most images are designed to run via Docker Compose on Portainer.
 Some of them could require environment variables to be set up in the Portainer stack configuration.
 
+### Armali.Horizon.Autoconfig
+
+Requires the following env variables:
+
+- **DATALAKE_ACCOUNT_KEY**: The key for the Azure Data Lake Storage account
+
 ### Armali.Horizon.Segaris
 
 Requires the following env variables:
 
 - **DATALAKE_ACCOUNT_KEY**: The key for the Azure Data Lake Storage account
+
+### Armali.Horizon.Megnir
+
+Requires the following env variables:
+
+- **HORIZON_NODE**: A name that identifies the computer or device that is running the service. Used to fetch the corresponding configuration from Autoconfig.
+- **HORIZON_APP**: In this case, the string "Megnir". Used to fetch the corresponding configuration from Autoconfig.

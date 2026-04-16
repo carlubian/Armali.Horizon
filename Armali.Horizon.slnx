@@ -5,11 +5,13 @@
     <Project Path="src/Armali.Horizon.Core/Armali.Horizon.Core.csproj" />
     <Project Path="src/Armali.Horizon.IO/Armali.Horizon.IO.csproj" />
     <Project Path="src/Armali.Horizon.Segaris/Armali.Horizon.Segaris.csproj" />
+    <Project Path="src/Armali.Horizon.Megnir/Armali.Horizon.Megnir.csproj" />
   </Folder>
   <Folder Name="/test/">
     <Project Path="test/Armali.Horizon.Core.Tests/Armali.Horizon.Core.Tests.csproj" />
     <Project Path="test/Armali.Horizon.IO.Tests/Armali.Horizon.IO.Tests.csproj" />
     <Project Path="test/Armali.Horizon.Segaris.Tests/Armali.Horizon.Segaris.Tests.csproj" />
     <Project Path="test/Armali.Horizon.Autoconfig.Tests/Armali.Horizon.Autoconfig.Tests.csproj" />
+    <Project Path="test/Armali.Horizon.Megnir.Tests/Armali.Horizon.Megnir.Tests.csproj" />
   </Folder>
 </Solution>

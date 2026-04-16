@@ -10,6 +10,14 @@
       - ASPNETCORE_ENVIRONMENT=Production
     restart: unless-stopped
 
+  megnir:
+    image: turegistro.azurecr.io/armali-horizon-megnir:latest
+    container_name: megnir
+    build:
+      context: .
+      dockerfile: src/Armali.Horizon.Megnir/Dockerfile
+    restart: "no"
+
 volumes:
   segaris-data:
 

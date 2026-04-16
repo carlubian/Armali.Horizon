@@ -90,3 +90,12 @@ public class VersionContext
     public string VersionName { get; set; } = string.Empty;
 }
 
+/// <summary>
+/// Resultado de <see cref="Services.AutoconfigService.FindValidFile"/>.
+/// Contiene el contenido del fichero y la versión que lo proporcionó.
+/// </summary>
+public class FindFileResult
+{
+    public string Content { get; set; } = string.Empty;
+    public string ResolvedVersion { get; set; } = string.Empty;
+}
