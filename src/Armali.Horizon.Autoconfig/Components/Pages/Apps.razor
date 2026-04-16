@@ -4,6 +4,7 @@
 @using Armali.Horizon.Autoconfig.Services
 
 @inject AutoconfigService AutoconfigService
+@inject IJSRuntime JS
 
 <HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="Refresh" />
 <HorizonLayout AppName="Autoconfig" PageName="Apps">
@@ -94,7 +95,7 @@
                         <HorizonCellText Content="@subEntity.Name" />
                         <HorizonCellDateTime Content="@subEntity.Date"/>
                         <HorizonCellButtons>
-                            <HorizonMiniButton Color="hz-sol" Icon="fa-file-pen" OnClick="@(() => PopupSubEntityEdit(subEntity))"/>
+                            <HorizonMiniButton Color="hz-sol" Icon="fa-file-pen" OnClick="@(() => OpenFiles(subEntity))"/>
                             <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupSubEntityEdit(subEntity))"/>
                             <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupSubEntityDelete(subEntity))"/>
                         </HorizonCellButtons>
@@ -320,5 +321,10 @@
         if (appId == 0)
             return new AppStats();
         return await AutoconfigService.GetAppStats(appId);
+    }
+    
+    private async Task OpenFiles(AutoconfigVersion version)
+    {
+        await JS.InvokeVoidAsync("openInNewTab", $"/files/{version.Id}");
     }
 }

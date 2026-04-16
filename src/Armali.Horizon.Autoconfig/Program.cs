@@ -18,6 +18,7 @@ builder.Services.AddScoped<HorizonSessionService>();
 
 builder.Services.AddDbContextFactory<AutoconfigDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetSection("Horizon")["ConnectionStrings:Autoconfig"]));
+builder.Services.AddSingleton<AutoconfigDatalakeService>();
 builder.Services.AddScoped<AutoconfigService>();
 
 var app = builder.Build();
