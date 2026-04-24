@@ -2,31 +2,34 @@
 
 ## Architecture
 
-This is a .NET 10 Blazor Server solution (`.slnx`) with five projects in a layered dependency graph:
+This is a .NET 10 Blazor Server solution (`.slnx`) with seven projects in a layered dependency graph:
 
 ```
-Armali.Horizon.Core  (shared: logging via Serilog/Seq, identity model, LINQ extensions)
+Armali.Horizon.Core       (shared: logging via Serilog/Seq, identity model, LINQ extensions)
     ↑
-Armali.Horizon.IO    (Redis pub/sub events with Zstd-compressed payloads)
-Armali.Horizon.Blazor (reusable Razor component library + Tailwind CSS design system)
+Armali.Horizon.IO         (Redis pub/sub events with Zstd-compressed payloads)
     ↑
-Armali.Horizon.Segaris     (Blazor Server app — EF Core SQLite, domain services, pages)
-Armali.Horizon.Autoconfig  (Blazor Server app — config provisioning, EF Core SQLite)
+Armali.Horizon.Contracts  (cross-app payloads & client wrappers — currently hosts Identity contracts)
+Armali.Horizon.Blazor     (reusable Razor component library + Tailwind CSS design system)
+    ↑
+Armali.Horizon.Segaris    (Blazor Server app — EF Core SQLite, domain services, pages)
+Armali.Horizon.Autoconfig (Blazor Server app — config provisioning, EF Core SQLite)
+Armali.Horizon.Identity   (Blazor Server app — central auth/users/roles/tokens, exposes everything via IO)
 ```
 
-**Segaris** and **Autoconfig** are runnable applications; **Blazor** and **Core** are reusable libraries shared across apps. Segaris depends on Blazor → Core. Autoconfig depends on Blazor → Core and also IO.
+**Segaris**, **Autoconfig** and **Identity** are runnable applications; **Blazor**, **Contracts**, **IO** and **Core** are reusable libraries shared across apps. All three apps depend on Blazor → Core, Contracts → IO/Core, and pull IO directly to publish/consume events.
 
 The `test/` folder mirrors the main code with four MSTest projects: `Armali.Horizon.Core.Tests`, `Armali.Horizon.IO.Tests`, `Armali.Horizon.Segaris.Tests`, and `Armali.Horizon.Autoconfig.Tests`.
 
 ## Build & Run
 
-- **Tailwind CSS** is compiled at build time via a local `tailwindcss.exe` binary (no npm). All three app projects (`Armali.Horizon.Blazor`, `Armali.Horizon.Segaris`, `Armali.Horizon.Autoconfig`) have a `TailwindBuild` MSBuild target that runs `.\tailwindcss.exe -i .\wwwroot\app.css -o .\wwwroot\tailwind.css --minify`. Pass `/p:SkipTailwindBuild=true` to skip it (used in Docker builds after a manual Tailwind step).
+- **Tailwind CSS** is compiled at build time via a local `tailwindcss.exe` binary (no npm). All app projects (`Armali.Horizon.Blazor`, `Armali.Horizon.Segaris`, `Armali.Horizon.Autoconfig`, `Armali.Horizon.Identity`) have a `TailwindBuild` MSBuild target that runs `.\tailwindcss.exe -i .\wwwroot\app.css -o .\wwwroot\tailwind.css --minify`. Pass `/p:SkipTailwindBuild=true` to skip it (used in Docker builds after a manual Tailwind step).
 - Run Segaris: `dotnet run --project src/Armali.Horizon.Segaris`
 - Run Autoconfig: `dotnet run --project src/Armali.Horizon.Autoconfig`
+- Run Identity: `dotnet run --project src/Armali.Horizon.Identity`
 - Run all tests: `dotnet test Armali.Horizon.slnx /p:SkipTailwindBuild=true`
-- EF Core migrations (Segaris): `dotnet ef migrations add <Name> --project src/Armali.Horizon.Segaris`
-- EF Core migrations (Autoconfig): `dotnet ef migrations add <Name> --project src/Armali.Horizon.Autoconfig`
-- Docker (single): `docker build -f src/Armali.Horizon.Segaris/Dockerfile .` or `docker build -f src/Armali.Horizon.Autoconfig/Dockerfile .`
+- EF Core migrations: `dotnet ef migrations add <Name> --project src/Armali.Horizon.<App>` (Segaris / Autoconfig / Identity). The Identity project pins `Microsoft.EntityFrameworkCore.Design 10.0.6` explicitly to avoid a transitive 8.0.0 pulled by `Microsoft.AspNetCore.App.Internal.Assets`.
+- Docker (single): `docker build -f src/Armali.Horizon.<App>/Dockerfile .`
 - Docker (compose): `docker-compose up` — `docker-compose.yml` is at the repository root
 
 ## Design System & Styling
@@ -78,7 +81,7 @@ When adding a new module, replicate this triple and register the service in `Pro
 
 ## Key Conventions
 
-- **Authentication**: `HorizonSessionService` stores `HorizonIdentity` in browser `localStorage` under key `"Horizon:Session"`. Pages gate access via `<HorizonAuthentication>` which redirects to `/horizon/login` if unauthenticated.
+- **Authentication**: centralized in `Armali.Horizon.Identity`, accessed by other apps exclusively through the IO bus on the `identity` channel (see the dedicated section below). `HorizonSessionService` stores the resulting `HorizonIdentity` (now including `Roles[]` and the bearer `Token`) in browser `localStorage` under key `"Horizon:Session"`. Pages gate access via `<HorizonAuthentication>`, which on every render revalidates the cached token via `identity.auth.whoami` and redirects to `/horizon/login` if it has expired or been revoked. The component exposes both the legacy `@bind-User` (UserId string) and the new `@bind-Identity` (full `HorizonIdentity`) for permission checks via `identity.HasRole("...")`.
 - **Privacy model**: entities with user-scoped visibility have `bool IsPrivate` + `string Creator` fields. Services filter with `.Where(e => !e.IsPrivate || e.Creator == userId)`. Use `Utils.PrivacyIcon()` / `Utils.PrivacyColor()` for rendering the lock/globe/share icon in `HorizonCellTwoLine`.
 - **DbContextFactory pattern**: services inject `IDbContextFactory<SegarisDbContext>` (not `SegarisDbContext` directly) and create short-lived contexts per method. This avoids concurrency issues in Blazor Server's long-lived scopes.
 - **Autoconfig service pattern**: `AutoconfigService` mirrors the same approach with `IDbContextFactory<AutoconfigDbContext>` and short-lived contexts per method.

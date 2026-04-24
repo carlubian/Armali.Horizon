@@ -1,0 +1,103 @@
+﻿@page "/profile"
+
+@using Armali.Horizon.Blazor.Services
+@using Armali.Horizon.Contracts.Identity
+@using Armali.Horizon.Core.Model
+@using Armali.Horizon.IO
+
+@inject HorizonEventService Events
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-Identity="Me" />
+<HorizonLayout AppName="Identity" PageName="Profile">
+    <Sidebar>
+        
+    </Sidebar>
+    <SidebarBottom>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-house" Caption="Home" OnClick="@(() => Nav.NavigateTo("/"))" />
+    </SidebarBottom>
+    <Body>
+        @if (Me is not null)
+        {
+            <div class="grid grid-cols-2 gap-8 max-w-4xl mx-auto">
+                
+                <!-- Datos del usuario -->
+                <div class="bg-hz-spartan rounded-xl p-6 shadow-xl">
+                    <HorizonLabelTitle Text="Account" />
+                    <div class="mt-4 grid grid-cols-2 gap-2 text-hz-arendelle font-hz-text">
+                        <div class="text-hz-artemisia">Display name</div>
+                        <div>@Me.UserName</div>
+                        <div class="text-hz-artemisia">User ID</div>
+                        <div class="font-mono text-xs break-all">@Me.UserId</div>
+                        <div class="text-hz-artemisia">Roles</div>
+                        <div class="flex flex-wrap gap-1">
+                            @if (Me.Roles.Length == 0)
+                            {
+                                <span class="italic text-hz-artemisia">none</span>
+                            }
+                            else
+                            {
+                                @foreach (var r in Me.Roles.OrderBy(x => x))
+                                {
+                                    <span class="px-2 py-0.5 rounded-lg bg-hz-styx text-xs">@r</span>
+                                }
+                            }
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Cambio de password -->
+                <div class="bg-hz-spartan rounded-xl p-6 shadow-xl">
+                    <HorizonLabelTitle Text="Change password" />
+                    <div class="mt-4 flex flex-col gap-4">
+                        <HorizonFormCell Label="Current password">
+                            <HorizonInputText @bind-Text="@_current" Placeholder="current" />
+                        </HorizonFormCell>
+                        <HorizonFormCell Label="New password">
+                            <HorizonInputText @bind-Text="@_new" Placeholder="new" />
+                        </HorizonFormCell>
+                        <HorizonFormCell Label="Confirm new password">
+                            <HorizonInputText @bind-Text="@_confirm" Placeholder="confirm" />
+                        </HorizonFormCell>
+                        @if (!string.IsNullOrEmpty(_error))
+                        {
+                            <div class="text-hz-tribunal text-sm">@_error</div>
+                        }
+                        @if (!string.IsNullOrEmpty(_ok))
+                        {
+                            <div class="text-hz-opera text-sm">@_ok</div>
+                        }
+                        <HorizonInlineButton Color="hz-apollo" Icon="fa-key" Caption="Update" OnClick="@DoChangePassword" />
+                    </div>
+                </div>
+            </div>
+        }
+    </Body>
+</HorizonLayout>
+
+@code {
+    private HorizonIdentity? Me;
+    
+    private string _current = string.Empty;
+    private string _new = string.Empty;
+    private string _confirm = string.Empty;
+    private string _error = string.Empty;
+    private string _ok = string.Empty;
+    
+    private async Task DoChangePassword()
+    {
+        _error = string.Empty;
+        _ok = string.Empty;
+        if (Me is null) return;
+        if (string.IsNullOrEmpty(_new) || _new != _confirm) { _error = "Las contraseñas no coinciden."; return; }
+        if (string.IsNullOrEmpty(_current)) { _error = "Introduce tu contraseña actual."; return; }
+        
+        var client = new HorizonAuthClient(Events, Me.Token);
+        var res = await client.ChangePasswordAsync(_current, _new);
+        if (!res.Success) { _error = res.Error?.Message ?? "Error"; return; }
+        
+        _current = _new = _confirm = string.Empty;
+        _ok = "Contraseña actualizada.";
+    }
+}
+

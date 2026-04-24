@@ -1,0 +1,43 @@
+﻿@page "/"
+@using Armali.Horizon.Core.Model
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-Identity="Me" />
+<HorizonLayout AppName="Identity" PageName="@PageTitle">
+    <Sidebar>
+
+    </Sidebar>
+    <SidebarBottom>
+
+    </SidebarBottom>
+    <Body>
+        <div class="grid grid-cols-4 h-[78vh] items-center justify-center content-center">
+
+            @if (IsAdmin)
+            {
+                <HorizonCard Title="Users" Image="/images/temp.png" OnClick="@(() => Nav.NavigateTo("/users"))" />
+            }
+            else
+            {
+                <div />
+            }
+            <HorizonCard Title="API keys" Image="/images/temp.png" OnClick="@(() => Nav.NavigateTo("/tokens"))" />
+            <HorizonCard Title="Sessions" Image="/images/temp.png" OnClick="@(() => Nav.NavigateTo("/sessions"))" />
+            <HorizonCard Title="Profile" Image="/images/temp.png" OnClick="@(() => Nav.NavigateTo("/profile"))" />
+        </div>
+    </Body>
+</HorizonLayout>
+
+@code
+{
+    private HorizonIdentity? Me { get; set; }
+    private static readonly string Version = System.Reflection.Assembly
+        .GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "0.0.0";
+
+    private bool IsAdmin => Me?.HasRole("admin") ?? false;
+
+    private string PageTitle =>
+        Me is null || string.IsNullOrEmpty(Me.UserName)
+            ? $"v{Version}"
+            : $"v{Version} - {Me.UserName}";
+}

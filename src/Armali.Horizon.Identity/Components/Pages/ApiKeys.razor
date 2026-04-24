@@ -1,0 +1,152 @@
+﻿@page "/tokens"
+
+@using Armali.Horizon.Blazor.Services
+@using Armali.Horizon.Contracts.Identity
+@using Armali.Horizon.Core.Model
+@using Armali.Horizon.IO
+
+@inject HorizonEventService Events
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-Identity="Me" OnAuthenticated="LoadData" />
+<HorizonLayout AppName="Identity" PageName="API keys">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="New Key" OnClick="@PopupCreate" />
+    </Sidebar>
+    <SidebarBottom>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-house" Caption="Home" OnClick="@(() => Nav.NavigateTo("/"))" />
+    </SidebarBottom>
+    <Body>
+        
+        <HorizonTable Items="@Tokens" PageSize="15">
+            <Header>
+                <HorizonCellHeader TItem="IdentityTokenDto" Name="Label" Filterable="true" ValueSelector="@(t => t.Label)" />
+                <HorizonCellHeader TItem="IdentityTokenDto" Name="Created" />
+                <HorizonCellHeader TItem="IdentityTokenDto" Name="Last used" />
+                <HorizonCellHeader TItem="IdentityTokenDto" Name="Status" />
+                <HorizonCellHeader TItem="IdentityTokenDto" Name="Actions" />
+            </Header>
+            <RowTemplate>
+                <HorizonCellText Content="@context.Label" Center="false" />
+                <HorizonCellDateTime Content="@context.CreatedAt" />
+                <HorizonCellText Content="@(context.LastUsedAt?.ToString("yyyy-MMM-dd HH:mm") ?? "—")" />
+                <HorizonCellText Content="@StatusOf(context)" />
+                <HorizonCellButtons>
+                    @if (!context.IsRevoked)
+                    {
+                        <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupRevoke(context))" />
+                    }
+                </HorizonCellButtons>
+            </RowTemplate>
+        </HorizonTable>
+        
+    </Body>
+</HorizonLayout>
+
+@if (ShowCreatePopup)
+{
+    <HorizonPopup @bind-Visible="ShowCreatePopup">
+        <HorizonDialog Title="New API key">
+            <Content>
+                <HorizonForm Model="@_label" Columns="1">
+                    <HorizonFormCell Label="Label">
+                        <HorizonInputText @bind-Text="@_label" Placeholder="e.g. codex-laptop" />
+                    </HorizonFormCell>
+                </HorizonForm>
+                <div class="text-hz-artemisia text-xs mt-2">
+                    Las API keys son <b>permanentes</b> hasta que se revoquen manualmente.
+                </div>
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="text-hz-tribunal mt-2 text-sm">@_error</div>
+                }
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => ShowCreatePopup = false)" />
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Create" OnClick="@DoCreate" />
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowRevokePopup && Target is not null)
+{
+    <HorizonPopup @bind-Visible="ShowRevokePopup">
+        <HorizonDialog Title="Revoke API key">
+            <Content>
+                <HorizonLabelTitle Text="¿Revocar esta API key?" />
+                <HorizonLabelText Text="@Target.Label" />
+                <div class="text-hz-tribunal text-sm mt-2">Las apps que la usen dejarán de poder autenticarse.</div>
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => ShowRevokePopup = false)" />
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-trash" Caption="Revoke" OnClick="@DoRevoke" />
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+<NewTokenPopup @bind-Visible="ShowNewTokenPopup" Title="New API key" Token="@NewToken" />
+
+@code {
+    private HorizonIdentity? Me;
+    private HorizonAuthClient? Client;
+    
+    private List<IdentityTokenDto> Tokens { get; set; } = [];
+    
+    private bool ShowCreatePopup;
+    private bool ShowRevokePopup;
+    private bool ShowNewTokenPopup;
+    private IdentityTokenDto? Target;
+    private string _label = string.Empty;
+    private string _error = string.Empty;
+    private string NewToken { get; set; } = string.Empty;
+    
+    private async Task LoadData()
+    {
+        if (Me is null) return;
+        Client = new HorizonAuthClient(Events, Me.Token);
+        var res = await Client.ListTokensAsync(kind: TokenKind.ApiKey);
+        // Ocultamos los revocados para no acumular ruido (mejora #3)
+        Tokens = res.Tokens.Where(t => !t.IsRevoked).ToList();
+    }
+    
+    private static string StatusOf(IdentityTokenDto t) =>
+        t.IsRevoked ? "Revoked" : "Active";
+    
+    private void PopupCreate()
+    {
+        _label = string.Empty;
+        _error = string.Empty;
+        ShowCreatePopup = true;
+    }
+    
+    private void PopupRevoke(IdentityTokenDto token)
+    {
+        Target = token;
+        ShowRevokePopup = true;
+    }
+    
+    private async Task DoCreate()
+    {
+        if (Client is null) return;
+        _error = string.Empty;
+        if (string.IsNullOrWhiteSpace(_label)) { _error = "Indica un label."; return; }
+        var res = await Client.CreateApiKeyAsync(_label);
+        if (!res.Success) { _error = res.Error?.Message ?? "Error creando la key."; return; }
+        ShowCreatePopup = false;
+        NewToken = res.Token;
+        ShowNewTokenPopup = true;
+        await LoadData();
+    }
+    
+    private async Task DoRevoke()
+    {
+        if (Client is null || Target is null) return;
+        var res = await Client.RevokeTokenAsync(Target.TokenId);
+        if (!res.Success) { _error = res.Error?.Message ?? "Error"; return; }
+        ShowRevokePopup = false;
+        await LoadData();
+    }
+}
+

@@ -1,0 +1,309 @@
+﻿@page "/users"
+
+@using Armali.Horizon.Blazor.Services
+@using Armali.Horizon.Contracts.Identity
+@using Armali.Horizon.Core.Model
+@using Armali.Horizon.IO
+
+@inject HorizonEventService Events
+@inject HorizonSessionService Storage
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-Identity="Me" OnAuthenticated="LoadData" />
+<HorizonLayout AppName="Identity" PageName="Users">
+    <Sidebar>
+        <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="Add User" OnClick="@PopupCreate" />
+    </Sidebar>
+    <SidebarBottom>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-house" Caption="Home" OnClick="@(() => Nav.NavigateTo("/"))" />
+    </SidebarBottom>
+    <Body>
+
+        @if (DefaultAdminWarning)
+        {
+            <div class="mb-4 p-4 rounded-xl bg-hz-tribunal text-hz-arendelle font-hz-text">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                El usuario <b>admin</b> sigue usando la contraseña por defecto. Cámbiala lo antes posible.
+            </div>
+        }
+    
+        <HorizonTable Items="@AllUsers" PageSize="15">
+            <Header>
+                <HorizonCellHeader TItem="IdentityUserDto" Name="UserName" Filterable="true" ValueSelector="@(u => u.UserName)" />
+                <HorizonCellHeader TItem="IdentityUserDto" Name="DisplayName" />
+                <HorizonCellHeader TItem="IdentityUserDto" Name="Roles" />
+                <HorizonCellHeader TItem="IdentityUserDto" Name="Active" />
+                <HorizonCellHeader TItem="IdentityUserDto" Name="Created" />
+                <HorizonCellHeader TItem="IdentityUserDto" Name="Actions" />
+            </Header>
+            <RowTemplate>
+                <HorizonCellText Content="@context.UserName" Center="false" />
+                <HorizonCellText Content="@context.DisplayName" />
+                <td class="px-2 text-center">
+                    <div class="flex flex-wrap gap-1 justify-center">
+                        @foreach (var r in context.Roles.OrderBy(x => x))
+                        {
+                            <span class="px-2 py-0.5 rounded-lg bg-hz-spartan text-hz-arendelle text-xs">@r</span>
+                        }
+                    </div>
+                </td>
+                <HorizonCellBoolean Content="@context.IsActive" />
+                <HorizonCellDateTime Content="@context.CreatedAt" />
+                <HorizonCellButtons>
+                    <HorizonMiniButton Color="hz-apollo" Icon="fa-pen" OnClick="@(() => PopupEdit(context))" />
+                    <HorizonMiniButton Color="hz-meridian" Icon="fa-shield-halved" OnClick="@(() => PopupRoles(context))" />
+                    <HorizonMiniButton Color="hz-sol" Icon="fa-key" OnClick="@(() => PopupResetPassword(context))" />
+                    @if (context.UserId != Me?.UserId)
+                    {
+                        <HorizonMiniButton Color="hz-tribunal" Icon="fa-trash" OnClick="@(() => PopupDelete(context))" />
+                    }
+                </HorizonCellButtons>
+            </RowTemplate>
+        </HorizonTable>
+    
+    </Body>
+</HorizonLayout>
+
+@if (ShowEditPopup && TargetEntity is not null)
+{
+    <HorizonPopup @bind-Visible="ShowEditPopup">
+        <HorizonDialog Title="@(Intent == PopupIntent.Create ? "New User" : $"Edit · {TargetEntity.UserName}")">
+            <Content>
+                <HorizonForm Model="@TargetEntity" Columns="2">
+                    <HorizonFormCell Label="Username">
+                        <HorizonInputText @bind-Text="@TargetEntity.UserName" Placeholder="username" />
+                    </HorizonFormCell>
+                    <HorizonFormCell Label="Display name">
+                        <HorizonInputText @bind-Text="@TargetEntity.DisplayName" Placeholder="Display Name" />
+                    </HorizonFormCell>
+                    @if (Intent == PopupIntent.Create)
+                    {
+                        <HorizonFormCell Label="Password">
+                            <HorizonInputText @bind-Text="@_initialPassword" Placeholder="password" />
+                        </HorizonFormCell>
+                    }
+                    <HorizonFormCell Label="Active">
+                        <HorizonCheckbox Text="Account active" @bind-Value="TargetEntity.IsActive" />
+                    </HorizonFormCell>
+                </HorizonForm>
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="text-hz-tribunal mt-2 text-sm">@_error</div>
+                }
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => ShowEditPopup = false)" />
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="@DoSave" />
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowDeletePopup && TargetEntity is not null)
+{
+    <HorizonPopup @bind-Visible="ShowDeletePopup">
+        <HorizonDialog Title="Confirm delete">
+            <Content>
+                <HorizonLabelTitle Text="Delete this user?" />
+                <HorizonLabelText Text="@($"{TargetEntity.UserName} ({TargetEntity.DisplayName})")" />
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => ShowDeletePopup = false)" />
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-trash" Caption="Delete" OnClick="@DoDelete" />
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@if (ShowResetPopup && TargetEntity is not null)
+{
+    <HorizonPopup @bind-Visible="ShowResetPopup">
+        <HorizonDialog Title="@($"Reset password · {TargetEntity.UserName}")">
+            <Content>
+                <HorizonForm Model="@TargetEntity" Columns="1">
+                    <HorizonFormCell Label="New password">
+                        <HorizonInputText @bind-Text="@_resetPassword" Placeholder="new password" />
+                    </HorizonFormCell>
+                </HorizonForm>
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="text-hz-tribunal mt-2 text-sm">@_error</div>
+                }
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => ShowResetPopup = false)" />
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-key" Caption="Reset" OnClick="@DoResetPassword" />
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+<RoleEditorPopup @bind-Visible="ShowRolesPopup"
+                 User="@TargetEntity"
+                 CurrentUserId="@(Me?.UserId ?? string.Empty)"
+                 Suggestions="@RoleSuggestions"
+                 OnSave="@DoSetRoles" />
+
+@code {
+    private HorizonIdentity? Me;
+    private HorizonAuthClient? Client;
+    
+    private List<IdentityUserDto> AllUsers { get; set; } = [];
+    private IReadOnlyList<string> RoleSuggestions { get; set; } = [];
+    private bool DefaultAdminWarning { get; set; }
+    
+    private bool ShowEditPopup;
+    private bool ShowDeletePopup;
+    private bool ShowResetPopup;
+    private bool ShowRolesPopup;
+    private PopupIntent Intent = PopupIntent.None;
+    private IdentityUserDto? TargetEntity;
+    private string _initialPassword = string.Empty;
+    private string _resetPassword = string.Empty;
+    private string _error = string.Empty;
+    
+    private async Task LoadData()
+    {
+        if (Me is null) return;
+        if (!Me.HasRole("admin"))
+        {
+            Nav.NavigateTo("/", true);
+            return;
+        }
+        
+        Client = new HorizonAuthClient(Events, Me.Token);
+        
+        var users = await Client.ListUsersAsync();
+        AllUsers = users.Users;
+        
+        var roles = await Client.ListRolesAsync();
+        RoleSuggestions = roles.Roles;
+        
+        // Aviso si el admin sigue con password por defecto: probamos un login adicional
+        // sólo cuando la lista contiene un único usuario y es el propio admin recién logueado.
+        DefaultAdminWarning = await CheckDefaultAdminPassword();
+    }
+    
+    private async Task<bool> CheckDefaultAdminPassword()
+    {
+        // Heurística simple: si el usuario actual es admin con UserName "admin" y
+        // el password "admin" sigue siendo válido, mostramos la advertencia.
+        if (Me is null || !Me.HasRole("admin")) return false;
+        var current = AllUsers.FirstOrDefault(u => u.UserId == Me.UserId);
+        if (current is null || !string.Equals(current.UserName, "admin", StringComparison.OrdinalIgnoreCase))
+            return false;
+        try
+        {
+            var probe = new HorizonAuthClient(Events);
+            var probed = await probe.LoginAsync("admin", "admin");
+            if (probed.Success && probed.Identity is not null)
+            {
+                // Revocamos inmediatamente la sesión-prueba para no acumular basura
+                probe.Token = probed.Identity.Token;
+                await probe.LogoutAsync();
+                return true;
+            }
+        }
+        catch { /* si falla, asumimos que la pwd ya no es la por defecto */ }
+        return false;
+    }
+    
+    private void PopupCreate()
+    {
+        TargetEntity = new IdentityUserDto { IsActive = true };
+        _initialPassword = string.Empty;
+        _error = string.Empty;
+        Intent = PopupIntent.Create;
+        ShowEditPopup = true;
+    }
+    
+    private void PopupEdit(IdentityUserDto entity)
+    {
+        // Clonamos para no mutar la fila si cancela
+        TargetEntity = new IdentityUserDto
+        {
+            UserId = entity.UserId,
+            UserName = entity.UserName,
+            DisplayName = entity.DisplayName,
+            IsActive = entity.IsActive,
+            Roles = entity.Roles,
+            CreatedAt = entity.CreatedAt,
+        };
+        _error = string.Empty;
+        Intent = PopupIntent.Edit;
+        ShowEditPopup = true;
+    }
+    
+    private void PopupDelete(IdentityUserDto entity)
+    {
+        TargetEntity = entity;
+        ShowDeletePopup = true;
+    }
+    
+    private void PopupRoles(IdentityUserDto entity)
+    {
+        TargetEntity = entity;
+        ShowRolesPopup = true;
+    }
+    
+    private void PopupResetPassword(IdentityUserDto entity)
+    {
+        TargetEntity = entity;
+        _resetPassword = string.Empty;
+        _error = string.Empty;
+        ShowResetPopup = true;
+    }
+    
+    private async Task DoSave()
+    {
+        if (Client is null || TargetEntity is null) return;
+        _error = string.Empty;
+        
+        if (Intent == PopupIntent.Create)
+        {
+            var res = await Client.CreateUserAsync(TargetEntity.UserName, TargetEntity.DisplayName, _initialPassword);
+            if (!res.Success) { _error = res.Error?.Message ?? "Error"; return; }
+        }
+        else
+        {
+            var res = await Client.UpdateUserAsync(TargetEntity.UserId, TargetEntity.DisplayName, TargetEntity.IsActive);
+            if (!res.Success) { _error = res.Error?.Message ?? "Error"; return; }
+        }
+        
+        ShowEditPopup = false;
+        await LoadData();
+    }
+    
+    private async Task DoDelete()
+    {
+        if (Client is null || TargetEntity is null) return;
+        var res = await Client.DeleteUserAsync(TargetEntity.UserId);
+        if (!res.Success) { _error = res.Error?.Message ?? "Error"; return; }
+        ShowDeletePopup = false;
+        await LoadData();
+    }
+    
+    private async Task DoResetPassword()
+    {
+        if (Client is null || TargetEntity is null) return;
+        _error = string.Empty;
+        if (string.IsNullOrEmpty(_resetPassword)) { _error = "Introduce una nueva contraseña."; return; }
+        var res = await Client.UpdateUserAsync(TargetEntity.UserId, newPassword: _resetPassword);
+        if (!res.Success) { _error = res.Error?.Message ?? "Error"; return; }
+        ShowResetPopup = false;
+        await LoadData();
+    }
+    
+    private async Task DoSetRoles(string[] roles)
+    {
+        if (Client is null || TargetEntity is null) return;
+        var res = await Client.SetUserRolesAsync(TargetEntity.UserId, roles);
+        if (!res.Success) { _error = res.Error?.Message ?? "Error"; return; }
+        await LoadData();
+    }
+}
+
+
+
+
+

@@ -1,0 +1,60 @@
+﻿@using Armali.Horizon.Blazor.Layout
+@inject IJSRuntime JS
+
+@*
+    Popup mono-uso que muestra un token recién creado (API key o sesión). El valor
+    en claro sólo está disponible aquí: si el usuario lo pierde, debe revocarlo y
+    crear uno nuevo. Incluye botón "Copy" para llevarlo al portapapeles.
+*@
+
+<HorizonPopup @bind-Visible="Visible">
+    <HorizonDialog Title="@Title">
+        <Content>
+            <div class="w-[28rem] max-w-full flex flex-col gap-4">
+                <div class="text-hz-tribunal text-sm">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    Guarda este valor: no se mostrará otra vez.
+                </div>
+                <div class="flex gap-2">
+                    <input type="text" readonly value="@Token"
+                           class="flex-1 rounded-xl bg-hz-styx text-hz-arendelle font-mono shadow-xl h-10 px-2 select-all" />
+                    <HorizonMiniButton Color="hz-apollo" Icon="@(_copied ? "fa-check" : "fa-copy")" OnClick="Copy" />
+                </div>
+            </div>
+        </Content>
+        <Controls>
+            <HorizonInlineButton Color="hz-opera" Icon="fa-check" Caption="Done" OnClick="Close" />
+        </Controls>
+    </HorizonDialog>
+</HorizonPopup>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    
+    [Parameter] public string Title { get; set; } = "New token";
+    [Parameter] public string Token { get; set; } = string.Empty;
+    
+    private bool _copied;
+    
+    private async Task Copy()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Token);
+            _copied = true;
+        }
+        catch
+        {
+            _copied = false;
+        }
+    }
+    
+    private async Task Close()
+    {
+        Visible = false;
+        _copied = false;
+        await VisibleChanged.InvokeAsync(Visible);
+    }
+}
+

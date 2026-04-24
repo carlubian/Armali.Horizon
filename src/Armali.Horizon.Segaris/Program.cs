@@ -1,5 +1,6 @@
 using Armali.Horizon.Blazor.Services;
 using Armali.Horizon.Core.Logs;
+using Armali.Horizon.IO;
 using Armali.Horizon.Segaris.Components;
 using Armali.Horizon.Segaris.Services;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,9 @@ public class Program
         
         // Logging centralizado con Serilog + Seq
         builder.Host.UseHorizonLogging();
+
+        // Bus de eventos Horizon (cliente: sin handlers, sólo RequestAsync hacia Identity y otros)
+        builder.Host.UseHorizonEvents();
 
         // Add services to the container.
         builder.Services.AddRazorComponents()

@@ -1,9 +1,13 @@
 ﻿@page "/horizon/logout"
 
 @using Armali.Horizon.Blazor.Services
+@using Armali.Horizon.Contracts.Identity
+@using Armali.Horizon.Core.Model
+@using Armali.Horizon.IO
 @using static Microsoft.AspNetCore.Components.Web.RenderMode
 
 @inject HorizonSessionService Storage
+@inject HorizonEventService Events
 @inject NavigationManager Nav
 
 @rendermode InteractiveServer
@@ -14,6 +18,21 @@
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        // Revocar el token en el servidor antes de limpiar la sesión local
+        var current = await Storage.GetItemAsync<HorizonIdentity>("Horizon:Session");
+        if (current is not null && !string.IsNullOrEmpty(current.Token))
+        {
+            try
+            {
+                var client = new HorizonAuthClient(Events, current.Token);
+                await client.LogoutAsync();
+            }
+            catch
+            {
+                // Ignoramos fallos: localmente igualmente borramos la sesión
+            }
+        }
+
         await Storage.RemoveItemAsync("Horizon:Session");
         Nav.NavigateTo("/", true);
     }

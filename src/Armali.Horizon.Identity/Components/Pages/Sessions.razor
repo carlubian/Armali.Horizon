@@ -1,0 +1,114 @@
+﻿@page "/sessions"
+
+@using Armali.Horizon.Blazor.Services
+@using Armali.Horizon.Contracts.Identity
+@using Armali.Horizon.Core.Model
+@using Armali.Horizon.IO
+
+@inject HorizonEventService Events
+@inject HorizonSessionService Storage
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-Identity="Me" OnAuthenticated="LoadData" />
+<HorizonLayout AppName="Identity" PageName="Sessions">
+    <Sidebar>
+        
+    </Sidebar>
+    <SidebarBottom>
+        <HorizonHeroButton Color="hz-apollo" Icon="fa-house" Caption="Home" OnClick="@(() => Nav.NavigateTo("/"))" />
+    </SidebarBottom>
+    <Body>
+        
+        <HorizonTable Items="@ActiveSessions" PageSize="15">
+            <Header>
+                <HorizonCellHeader TItem="IdentityTokenDto" Name="Created" />
+                <HorizonCellHeader TItem="IdentityTokenDto" Name="Last used" />
+                <HorizonCellHeader TItem="IdentityTokenDto" Name="Expires" />
+                <HorizonCellHeader TItem="IdentityTokenDto" Name="Status" />
+                <HorizonCellHeader TItem="IdentityTokenDto" Name="Actions" />
+            </Header>
+            <RowTemplate>
+                <HorizonCellDateTime Content="@context.CreatedAt" Format="yyyy-MMM-dd HH:mm" />
+                <HorizonCellText Content="@(context.LastUsedAt?.ToString("yyyy-MMM-dd HH:mm") ?? "—")" />
+                <HorizonCellText Content="@(context.ExpiresAt?.ToString("yyyy-MMM-dd HH:mm") ?? "—")" />
+                <HorizonCellText Content="@StatusOf(context)" Icon="@(context.IsCurrent ? "fa-circle-dot" : "")" IconColor="text-hz-opera" />
+                <HorizonCellButtons>
+                    <HorizonMiniButton Color="hz-tribunal" Icon="fa-power-off" OnClick="@(() => PopupRevoke(context))" />
+                </HorizonCellButtons>
+            </RowTemplate>
+        </HorizonTable>
+        
+    </Body>
+</HorizonLayout>
+
+@if (ShowRevokePopup && Target is not null)
+{
+    <HorizonPopup @bind-Visible="ShowRevokePopup">
+        <HorizonDialog Title="Revoke session">
+            <Content>
+                <HorizonLabelTitle Text="@(Target.IsCurrent ? "¿Cerrar la sesión actual?" : "¿Revocar esta sesión?")" />
+                @if (Target.IsCurrent)
+                {
+                    <div class="text-hz-tribunal text-sm mt-2">
+                        Estás revocando la sesión activa: serás desconectado inmediatamente.
+                    </div>
+                }
+            </Content>
+            <Controls>
+                <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => ShowRevokePopup = false)" />
+                <HorizonInlineButton Color="hz-apollo" Icon="fa-power-off" Caption="Revoke" OnClick="@DoRevoke" />
+            </Controls>
+        </HorizonDialog>
+    </HorizonPopup>
+}
+
+@code {
+    private HorizonIdentity? Me;
+    private HorizonAuthClient? Client;
+    
+    private List<IdentityTokenDto> ActiveSessions { get; set; } = [];
+    
+    private bool ShowRevokePopup;
+    private IdentityTokenDto? Target;
+    
+    private async Task LoadData()
+    {
+        if (Me is null) return;
+        Client = new HorizonAuthClient(Events, Me.Token);
+        var res = await Client.ListTokensAsync(kind: TokenKind.Session);
+        ActiveSessions = res.Tokens
+            .Where(t => !t.IsRevoked && (t.ExpiresAt == null || t.ExpiresAt > DateTime.UtcNow))
+            .ToList();
+    }
+    
+    private static string StatusOf(IdentityTokenDto t) =>
+        t.IsCurrent ? "Current" : "Active";
+    
+    private void PopupRevoke(IdentityTokenDto token)
+    {
+        Target = token;
+        ShowRevokePopup = true;
+    }
+    
+    private async Task DoRevoke()
+    {
+        if (Client is null || Target is null) return;
+        var res = await Client.RevokeTokenAsync(Target.TokenId);
+        if (!res.Success) return;
+        
+        // Si revocamos la sesión actual, forzamos un logout local (mejora #4)
+        if (Target.IsCurrent)
+        {
+            await Storage.RemoveItemAsync("Horizon:Session");
+            Nav.NavigateTo("/horizon/login", true);
+            return;
+        }
+        
+        ShowRevokePopup = false;
+        await LoadData();
+    }
+}
+
+
+
+
