@@ -1,0 +1,115 @@
+﻿###############################################################################
+# Armali Horizon — Docker Compose (Local / Desarrollo)
+#
+# Construye las imágenes desde los Dockerfiles locales en lugar de descargarlas
+# de un Container Registry. Ideal para pruebas locales.
+#
+# Uso:
+#   docker compose -f docker-compose.local.yml up --build
+#
+# Puertos por defecto (iguales a producción):
+#   - Identity:   5149
+#   - Segaris:    5122
+#   - Autoconfig: 5004
+#   - Redis:      6379
+#
+# Variables de entorno configurables (se pueden sobreescribir con un .env):
+#   - HORIZON_SEQ_ENDPOINT   → URL de Seq para logging centralizado
+#   - HORIZON_SEQ_APIKEY     → API key de Seq (opcional)
+#   - DATALAKE_ACCOUNT_KEY   → Clave de Azure Data Lake (Segaris y Autoconfig)
+#   - IDENTITY_SEED_USER     → Usuario inicial de Identity (por defecto: armali)
+#   - IDENTITY_SEED_PASSWORD → Contraseña del usuario inicial (por defecto: armali)
+###############################################################################
+
+services:
+
+  # ─── Redis ─────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: horizon-redis
+    command: ["redis-server", "--bind", "0.0.0.0", "--protected-mode", "no"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+
+  # ─── Identity ──────────────────────────────────────────────────────────────────
+  identity:
+    build:
+      context: .
+      dockerfile: src/Armali.Horizon.Identity/Dockerfile
+    container_name: horizon-identity
+    ports:
+      - "5149:5149"
+    volumes:
+      - identity-data:/persistence
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Horizon__ConnectionStrings__Identity=Data Source=/persistence/identity.db
+      - Horizon__Events__Endpoint=horizon-redis:6379
+      - Horizon__Events__DefaultTimeoutSeconds=10
+      - Horizon__Seed__UserName=${IDENTITY_SEED_USER:-armali}
+      - Horizon__Seed__Password=${IDENTITY_SEED_PASSWORD:-armali}
+      - Horizon__Logging__Endpoint=${HORIZON_SEQ_ENDPOINT:-http://host.docker.internal:5341}
+      - Horizon__Logging__ApiKey=${HORIZON_SEQ_APIKEY:-}
+      - Horizon__Logging__MinimumLevel=Information
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # ─── Segaris ───────────────────────────────────────────────────────────────────
+  segaris:
+    build:
+      context: .
+      dockerfile: src/Armali.Horizon.Segaris/Dockerfile
+    container_name: horizon-segaris
+    ports:
+      - "5122:5122"
+    volumes:
+      - segaris-data:/persistence
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Horizon__ConnectionStrings__Segaris=Data Source=/persistence/segaris_v4.db
+      - Horizon__Events__Endpoint=horizon-redis:6379
+      - Horizon__Events__DefaultTimeoutSeconds=10
+      - Horizon__Logging__Endpoint=${HORIZON_SEQ_ENDPOINT:-http://host.docker.internal:5341}
+      - Horizon__Logging__ApiKey=${HORIZON_SEQ_APIKEY:-}
+      - Horizon__Logging__MinimumLevel=Information
+      - DATALAKE_ACCOUNT_KEY=${DATALAKE_ACCOUNT_KEY:-}
+    depends_on:
+      - redis
+      - identity
+    restart: unless-stopped
+
+  # ─── Autoconfig ────────────────────────────────────────────────────────────────
+  autoconfig:
+    build:
+      context: .
+      dockerfile: src/Armali.Horizon.Autoconfig/Dockerfile
+    container_name: horizon-autoconfig
+    ports:
+      - "5004:5004"
+    volumes:
+      - autoconfig-data:/persistence
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Horizon__ConnectionStrings__Autoconfig=Data Source=/persistence/autoconfig.db
+      - Horizon__Events__Endpoint=horizon-redis:6379
+      - Horizon__Events__DefaultTimeoutSeconds=10
+      - Horizon__Logging__Endpoint=${HORIZON_SEQ_ENDPOINT:-http://host.docker.internal:5341}
+      - Horizon__Logging__ApiKey=${HORIZON_SEQ_APIKEY:-}
+      - Horizon__Logging__MinimumLevel=Information
+      - DATALAKE_ACCOUNT_KEY=${DATALAKE_ACCOUNT_KEY:-}
+    depends_on:
+      - redis
+      - identity
+    restart: unless-stopped
+
+# ─── Volúmenes con nombre (aislados de producción) ────────────────────────────
+volumes:
+  redis-data:
+  identity-data:
+  segaris-data:
+  autoconfig-data:
+

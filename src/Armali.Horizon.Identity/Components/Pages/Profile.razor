@@ -89,15 +89,15 @@
         _error = string.Empty;
         _ok = string.Empty;
         if (Me is null) return;
-        if (string.IsNullOrEmpty(_new) || _new != _confirm) { _error = "Las contraseñas no coinciden."; return; }
-        if (string.IsNullOrEmpty(_current)) { _error = "Introduce tu contraseña actual."; return; }
+        if (string.IsNullOrEmpty(_new) || _new != _confirm) { _error = "Passwords don't match."; return; }
+        if (string.IsNullOrEmpty(_current)) { _error = "Enter current password."; return; }
         
         var client = new HorizonAuthClient(Events, Me.Token);
         var res = await client.ChangePasswordAsync(_current, _new);
         if (!res.Success) { _error = res.Error?.Message ?? "Error"; return; }
         
         _current = _new = _confirm = string.Empty;
-        _ok = "Contraseña actualizada.";
+        _ok = "Password updated.";
     }
 }
 

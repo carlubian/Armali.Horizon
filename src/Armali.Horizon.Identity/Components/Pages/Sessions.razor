@@ -46,11 +46,11 @@
     <HorizonPopup @bind-Visible="ShowRevokePopup">
         <HorizonDialog Title="Revoke session">
             <Content>
-                <HorizonLabelTitle Text="@(Target.IsCurrent ? "¿Cerrar la sesión actual?" : "¿Revocar esta sesión?")" />
+                <HorizonLabelTitle Text="@(Target.IsCurrent ? "Close the current session?" : "Close this session?")" />
                 @if (Target.IsCurrent)
                 {
                     <div class="text-hz-tribunal text-sm mt-2">
-                        Estás revocando la sesión activa: serás desconectado inmediatamente.
+                        You are closing the current session: you will be disconnected immediately.
                     </div>
                 }
             </Content>

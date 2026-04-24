@@ -29,8 +29,8 @@
     
         <HorizonTable Items="@AllUsers" PageSize="15">
             <Header>
-                <HorizonCellHeader TItem="IdentityUserDto" Name="UserName" Filterable="true" ValueSelector="@(u => u.UserName)" />
-                <HorizonCellHeader TItem="IdentityUserDto" Name="DisplayName" />
+                <HorizonCellHeader TItem="IdentityUserDto" Name="Username" Filterable="true" ValueSelector="@(u => u.UserName)" />
+                <HorizonCellHeader TItem="IdentityUserDto" Name="Display Name" />
                 <HorizonCellHeader TItem="IdentityUserDto" Name="Roles" />
                 <HorizonCellHeader TItem="IdentityUserDto" Name="Active" />
                 <HorizonCellHeader TItem="IdentityUserDto" Name="Created" />
@@ -208,8 +208,17 @@
         return false;
     }
     
+    private void CloseAllPopups()
+    {
+        ShowEditPopup = false;
+        ShowDeletePopup = false;
+        ShowResetPopup = false;
+        ShowRolesPopup = false;
+    }
+    
     private void PopupCreate()
     {
+        CloseAllPopups();
         TargetEntity = new IdentityUserDto { IsActive = true };
         _initialPassword = string.Empty;
         _error = string.Empty;
@@ -219,6 +228,7 @@
     
     private void PopupEdit(IdentityUserDto entity)
     {
+        CloseAllPopups();
         // Clonamos para no mutar la fila si cancela
         TargetEntity = new IdentityUserDto
         {
@@ -236,18 +246,21 @@
     
     private void PopupDelete(IdentityUserDto entity)
     {
+        CloseAllPopups();
         TargetEntity = entity;
         ShowDeletePopup = true;
     }
     
     private void PopupRoles(IdentityUserDto entity)
     {
+        CloseAllPopups();
         TargetEntity = entity;
         ShowRolesPopup = true;
     }
     
     private void PopupResetPassword(IdentityUserDto entity)
     {
+        CloseAllPopups();
         TargetEntity = entity;
         _resetPassword = string.Empty;
         _error = string.Empty;

@@ -48,13 +48,13 @@
     <HorizonPopup @bind-Visible="ShowCreatePopup">
         <HorizonDialog Title="New API key">
             <Content>
-                <HorizonForm Model="@_label" Columns="1">
+                <HorizonForm Model="@_createForm" Columns="1">
                     <HorizonFormCell Label="Label">
                         <HorizonInputText @bind-Text="@_label" Placeholder="e.g. codex-laptop" />
                     </HorizonFormCell>
                 </HorizonForm>
                 <div class="text-hz-artemisia text-xs mt-2">
-                    Las API keys son <b>permanentes</b> hasta que se revoquen manualmente.
+                    API keys are <b>permanent</b> until manually revoked.
                 </div>
                 @if (!string.IsNullOrEmpty(_error))
                 {
@@ -74,9 +74,9 @@
     <HorizonPopup @bind-Visible="ShowRevokePopup">
         <HorizonDialog Title="Revoke API key">
             <Content>
-                <HorizonLabelTitle Text="¿Revocar esta API key?" />
+                <HorizonLabelTitle Text="Revoke this API key?" />
                 <HorizonLabelText Text="@Target.Label" />
-                <div class="text-hz-tribunal text-sm mt-2">Las apps que la usen dejarán de poder autenticarse.</div>
+                <div class="text-hz-tribunal text-sm mt-2">Apps using it won't be able to authenticate.</div>
             </Content>
             <Controls>
                 <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="@(() => ShowRevokePopup = false)" />
@@ -98,6 +98,7 @@
     private bool ShowRevokePopup;
     private bool ShowNewTokenPopup;
     private IdentityTokenDto? Target;
+    private readonly object _createForm = new();
     private string _label = string.Empty;
     private string _error = string.Empty;
     private string NewToken { get; set; } = string.Empty;
@@ -131,9 +132,9 @@
     {
         if (Client is null) return;
         _error = string.Empty;
-        if (string.IsNullOrWhiteSpace(_label)) { _error = "Indica un label."; return; }
+        if (string.IsNullOrWhiteSpace(_label)) { _error = "Write a label."; return; }
         var res = await Client.CreateApiKeyAsync(_label);
-        if (!res.Success) { _error = res.Error?.Message ?? "Error creando la key."; return; }
+        if (!res.Success) { _error = res.Error?.Message ?? "Error creating key."; return; }
         ShowCreatePopup = false;
         NewToken = res.Token;
         ShowNewTokenPopup = true;
