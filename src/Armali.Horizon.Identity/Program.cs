@@ -60,13 +60,13 @@ public class Program
             db.Database.Migrate();
         }
 
-        // Seed inicial: admin/admin (configurable). Sólo crea el usuario si la BD está vacía.
+        // Seed inicial: armali/armali (configurable). Sólo crea el usuario si la BD está vacía.
         using (var scope = app.Services.CreateScope())
         {
             var svc = scope.ServiceProvider.GetRequiredService<IdentityService>();
             var seedSection = builder.Configuration.GetSection("Horizon:Seed");
-            var seedUser = seedSection["UserName"] ?? "admin";
-            var seedPwd = seedSection["Password"] ?? "admin";
+            var seedUser = seedSection["UserName"] ?? "armali";
+            var seedPwd = seedSection["Password"] ?? "armali";
             svc.EnsureSeedAsync(seedUser, seedPwd).GetAwaiter().GetResult();
         }
 
