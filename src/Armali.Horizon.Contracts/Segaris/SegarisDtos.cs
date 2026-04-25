@@ -237,3 +237,66 @@ public class InvItemPriceHistoryDto
     public double UnitPrice { get; set; }
 }
 
+// ── Clothes ─────────────────────────────────────────────────────────────────
+
+public class ClothesEntityDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public DateTime Date { get; set; }
+    public string GarmentCode { get; set; } = string.Empty;
+    public int CategoryId { get; set; }
+    public int StatusId { get; set; }
+    public int WashTypeId { get; set; }
+    public bool IsPrivate { get; set; }
+    public string Creator { get; set; } = string.Empty;
+}
+
+/// <summary>Color del catálogo de ropa con código hexadecimal.</summary>
+public class ClothesColorDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string Reference { get; set; } = string.Empty;
+}
+
+public class ClothesColorAssignmentDto
+{
+    public int Id { get; set; }
+    public int GarmentId { get; set; }
+    public int ColorId { get; set; }
+    public int StyleId { get; set; }
+}
+
+// ── Admin (Processes) ───────────────────────────────────────────────────────
+
+public class AdminEntityDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public int CategoryId { get; set; }
+    public bool IsPrivate { get; set; }
+    public string Creator { get; set; } = string.Empty;
+}
+
+public class AdminSubEntityDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public DateTime StartDate { get; set; }
+    public DateTime DueDate { get; set; }
+    public bool IsCompleted { get; set; }
+    public int ProcessId { get; set; }
+}
+
+public class AdminStatsDto
+{
+    public int Finished { get; set; }
+    public int NotStarted { get; set; }
+    public int OnTime { get; set; }
+    public int Delayed { get; set; }
+    public int Total { get; set; }
+    public string OverallColor { get; set; } = string.Empty;
+    public string OverallName { get; set; } = string.Empty;
+    public string Summary { get; set; } = string.Empty;
+}

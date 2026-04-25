@@ -31,14 +31,14 @@ public static class SegarisProjectMcpTools
     public static async Task<object> SegarisListProjects(HorizonSegarisClient client) =>
         SegarisToolHelpers.Wrap(await client.ListProjectsAsync(), r => new { success = true, projects = r.Projects });
     
-    [McpServerTool, Description("Lista las categorías de sub-entidades (anexos) de proyecto.")]
+    [McpServerTool, Description("Lista las categorías de ficheros asociados a proyectos.")]
     public static async Task<object> SegarisListProjectSubEntityCategories(HorizonSegarisClient client) =>
         SegarisToolHelpers.Wrap(await client.ListProjectSubEntityCategoriesAsync(), r => new { success = true, categories = r.Categories });
     
-    [McpServerTool, Description("Lista las sub-entidades (anexos/eventos) de un proyecto concreto.")]
+    [McpServerTool, Description("Lista los ficheros asociados a un proyecto concreto.")]
     public static async Task<object> SegarisListProjectSubEntities(
         HorizonSegarisClient client,
-        [Description("ID del proyecto cuyo histórico de sub-entidades se solicita.")] int projectId) =>
+        [Description("ID del proyecto cuyo listado de ficheros se solicita.")] int projectId) =>
         SegarisToolHelpers.Wrap(await client.ListProjectSubEntitiesAsync(projectId), r => new { success = true, subEntities = r.SubEntities });
     
     [McpServerTool, Description("Lista las categorías de riesgos de proyecto.")]

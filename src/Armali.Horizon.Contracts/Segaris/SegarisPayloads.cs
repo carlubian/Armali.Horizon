@@ -541,3 +541,144 @@ public class GetInvItemPriceHistoryResponse : IHorizonEventPayload, ISegarisResp
     public List<InvItemPriceHistoryDto> History { get; set; } = [];
 }
 
+// ── Clothes ─────────────────────────────────────────────────────────────────
+
+public class ListClothesCategoriesRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.clothes.categories.list";
+}
+public class ListClothesCategoriesResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.clothes.categories.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<SegarisRefDto> Categories { get; set; } = [];
+}
+
+public class ListClothesStatusesRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.clothes.statuses.list";
+}
+public class ListClothesStatusesResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.clothes.statuses.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<SegarisStatusDto> Statuses { get; set; } = [];
+}
+
+public class ListClothesWashTypesRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.clothes.washTypes.list";
+}
+public class ListClothesWashTypesResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.clothes.washTypes.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<SegarisRefDto> WashTypes { get; set; } = [];
+}
+
+public class ListClothesColorsRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.clothes.colors.list";
+}
+public class ListClothesColorsResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.clothes.colors.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<ClothesColorDto> Colors { get; set; } = [];
+}
+
+public class ListClothesColorStylesRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.clothes.colorStyles.list";
+}
+public class ListClothesColorStylesResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.clothes.colorStyles.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<SegarisRefDto> ColorStyles { get; set; } = [];
+}
+
+public class ListClothesRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.clothes.list";
+}
+public class ListClothesResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.clothes.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<ClothesEntityDto> Items { get; set; } = [];
+}
+
+public class ListClothesColorAssignmentsRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.clothes.colorAssignments.list";
+    /// <summary>ID de la prenda cuyos colores se quieren consultar.</summary>
+    public int GarmentId { get; set; }
+}
+public class ListClothesColorAssignmentsResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.clothes.colorAssignments.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<ClothesColorAssignmentDto> Assignments { get; set; } = [];
+}
+
+// ── Admin (Processes) ───────────────────────────────────────────────────────
+
+public class ListAdminCategoriesRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.admin.categories.list";
+}
+public class ListAdminCategoriesResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.admin.categories.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<SegarisRefDto> Categories { get; set; } = [];
+}
+
+public class ListAdminRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.admin.list";
+}
+public class ListAdminResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.admin.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<AdminEntityDto> Items { get; set; } = [];
+}
+
+public class ListAdminSubEntitiesRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.admin.steps.list";
+    /// <summary>ID del proceso cuyos pasos se quieren consultar.</summary>
+    public int ProcessId { get; set; }
+}
+public class ListAdminSubEntitiesResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.admin.steps.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<AdminSubEntityDto> Steps { get; set; } = [];
+}
+
+public class GetAdminStatsRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.admin.stats.get";
+    /// <summary>ID del proceso del que se quieren estadísticas.</summary>
+    public int ProcessId { get; set; }
+}
+public class GetAdminStatsResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.admin.stats.get:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public AdminStatsDto Stats { get; set; } = new();
+}

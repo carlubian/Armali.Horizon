@@ -72,7 +72,20 @@ public class Program
                 .HandleRequest<ListInvOrderLinesHandler, ListInvOrderLinesRequest, ListInvOrderLinesResponse>(SegarisChannels.Channel)
                 .HandleRequest<GetInvVendorStatsHandler, GetInvVendorStatsRequest, GetInvVendorStatsResponse>(SegarisChannels.Channel)
                 .HandleRequest<GetInvOrderStatsHandler, GetInvOrderStatsRequest, GetInvOrderStatsResponse>(SegarisChannels.Channel)
-                .HandleRequest<GetInvItemPriceHistoryHandler, GetInvItemPriceHistoryRequest, GetInvItemPriceHistoryResponse>(SegarisChannels.Channel);
+                .HandleRequest<GetInvItemPriceHistoryHandler, GetInvItemPriceHistoryRequest, GetInvItemPriceHistoryResponse>(SegarisChannels.Channel)
+                // Clothes
+                .HandleRequest<ListClothesCategoriesHandler, ListClothesCategoriesRequest, ListClothesCategoriesResponse>(SegarisChannels.Channel)
+                .HandleRequest<ListClothesStatusesHandler, ListClothesStatusesRequest, ListClothesStatusesResponse>(SegarisChannels.Channel)
+                .HandleRequest<ListClothesWashTypesHandler, ListClothesWashTypesRequest, ListClothesWashTypesResponse>(SegarisChannels.Channel)
+                .HandleRequest<ListClothesColorsHandler, ListClothesColorsRequest, ListClothesColorsResponse>(SegarisChannels.Channel)
+                .HandleRequest<ListClothesColorStylesHandler, ListClothesColorStylesRequest, ListClothesColorStylesResponse>(SegarisChannels.Channel)
+                .HandleRequest<ListClothesHandler, ListClothesRequest, ListClothesResponse>(SegarisChannels.Channel)
+                .HandleRequest<ListClothesColorAssignmentsHandler, ListClothesColorAssignmentsRequest, ListClothesColorAssignmentsResponse>(SegarisChannels.Channel)
+                // Admin (Processes)
+                .HandleRequest<ListAdminCategoriesHandler, ListAdminCategoriesRequest, ListAdminCategoriesResponse>(SegarisChannels.Channel)
+                .HandleRequest<ListAdminHandler, ListAdminRequest, ListAdminResponse>(SegarisChannels.Channel)
+                .HandleRequest<ListAdminSubEntitiesHandler, ListAdminSubEntitiesRequest, ListAdminSubEntitiesResponse>(SegarisChannels.Channel)
+                .HandleRequest<GetAdminStatsHandler, GetAdminStatsRequest, GetAdminStatsResponse>(SegarisChannels.Channel);
         });
         
         // Cliente Identity para que los handlers validen el token recibido.

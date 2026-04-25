@@ -146,5 +146,40 @@ internal static class SegarisDtoMapper
         Id = h.Id, PurchaseDate = h.PurchaseDate, VendorId = h.VendorId,
         ItemCount = h.ItemCount, TotalAmount = h.TotalAmount, UnitPrice = h.UnitPrice,
     };
+    
+    // ── Clothes ────────────────────────────────────────────────────────────
+    public static SegarisRefDto ToDto(this ClothesCategory c) => new() { Id = c.Id, Name = c.Name };
+    public static SegarisStatusDto ToDto(this ClothesStatus s) => new() { Id = s.Id, Name = s.Name, Color = s.Color };
+    public static SegarisRefDto ToDto(this ClothesWashType w) => new() { Id = w.Id, Name = w.Name };
+    public static ClothesColorDto ToDto(this ClothesColor c) => new() { Id = c.Id, Name = c.Name, Reference = c.Reference };
+    public static SegarisRefDto ToDto(this ClothesColorStyle s) => new() { Id = s.Id, Name = s.Name };
+    public static ClothesEntityDto ToDto(this ClothesEntity e) => new()
+    {
+        Id = e.Id, Name = e.Name, Date = e.Date, GarmentCode = e.GarmentCode,
+        CategoryId = e.CategoryId, StatusId = e.StatusId, WashTypeId = e.WashTypeId,
+        IsPrivate = e.IsPrivate, Creator = e.Creator,
+    };
+    public static ClothesColorAssignmentDto ToDto(this ClothesColorAssignment a) => new()
+    {
+        Id = a.Id, GarmentId = a.GarmentId, ColorId = a.ColorId, StyleId = a.StyleId,
+    };
+    
+    // ── Admin (Processes) ──────────────────────────────────────────────────
+    public static SegarisRefDto ToDto(this AdminCategory c) => new() { Id = c.Id, Name = c.Name };
+    public static AdminEntityDto ToDto(this AdminEntity e) => new()
+    {
+        Id = e.Id, Name = e.Name, CategoryId = e.CategoryId,
+        IsPrivate = e.IsPrivate, Creator = e.Creator,
+    };
+    public static AdminSubEntityDto ToDto(this AdminSubEntity e) => new()
+    {
+        Id = e.Id, Name = e.Name, StartDate = e.StartDate, DueDate = e.DueDate,
+        IsCompleted = e.IsCompleted, ProcessId = e.ProcessId,
+    };
+    public static AdminStatsDto ToDto(this AdminStats s) => new()
+    {
+        Finished = s.Finished, NotStarted = s.NotStarted, OnTime = s.OnTime,
+        Delayed = s.Delayed, Total = s.Total, OverallColor = s.OverallColor,
+        OverallName = s.OverallName, Summary = s.Summary,
+    };
 }
-

@@ -177,5 +177,41 @@ public class HorizonSegarisClient
     
     public Task<GetInvItemPriceHistoryResponse> GetInvItemPriceHistoryAsync(int itemId) =>
         Send<GetInvItemPriceHistoryResponse>(new GetInvItemPriceHistoryRequest { ItemId = itemId });
+    
+    // ── Clothes ────────────────────────────────────────────────────────
+    
+    public Task<ListClothesCategoriesResponse> ListClothesCategoriesAsync() =>
+        Send<ListClothesCategoriesResponse>(new ListClothesCategoriesRequest());
+    
+    public Task<ListClothesStatusesResponse> ListClothesStatusesAsync() =>
+        Send<ListClothesStatusesResponse>(new ListClothesStatusesRequest());
+    
+    public Task<ListClothesWashTypesResponse> ListClothesWashTypesAsync() =>
+        Send<ListClothesWashTypesResponse>(new ListClothesWashTypesRequest());
+    
+    public Task<ListClothesColorsResponse> ListClothesColorsAsync() =>
+        Send<ListClothesColorsResponse>(new ListClothesColorsRequest());
+    
+    public Task<ListClothesColorStylesResponse> ListClothesColorStylesAsync() =>
+        Send<ListClothesColorStylesResponse>(new ListClothesColorStylesRequest());
+    
+    public Task<ListClothesResponse> ListClothesAsync() =>
+        Send<ListClothesResponse>(new ListClothesRequest());
+    
+    public Task<ListClothesColorAssignmentsResponse> ListClothesColorAssignmentsAsync(int garmentId) =>
+        Send<ListClothesColorAssignmentsResponse>(new ListClothesColorAssignmentsRequest { GarmentId = garmentId });
+    
+    // ── Admin (Processes) ──────────────────────────────────────────────
+    
+    public Task<ListAdminCategoriesResponse> ListAdminCategoriesAsync() =>
+        Send<ListAdminCategoriesResponse>(new ListAdminCategoriesRequest());
+    
+    public Task<ListAdminResponse> ListAdminAsync() =>
+        Send<ListAdminResponse>(new ListAdminRequest());
+    
+    public Task<ListAdminSubEntitiesResponse> ListAdminSubEntitiesAsync(int processId) =>
+        Send<ListAdminSubEntitiesResponse>(new ListAdminSubEntitiesRequest { ProcessId = processId });
+    
+    public Task<GetAdminStatsResponse> GetAdminStatsAsync(int processId) =>
+        Send<GetAdminStatsResponse>(new GetAdminStatsRequest { ProcessId = processId });
 }
-

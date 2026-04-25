@@ -525,3 +525,138 @@ public class GetInvItemPriceHistoryHandler(HorizonAuthClient identity, Inventory
     }
 }
 
+// ── Clothes ─────────────────────────────────────────────────────────────────
+
+public class ListClothesCategoriesHandler(HorizonAuthClient identity, ClothesService svc)
+    : IHorizonRequestHandler<ListClothesCategoriesRequest, ListClothesCategoriesResponse>
+{
+    public async Task<ListClothesCategoriesResponse> HandleAsync(ListClothesCategoriesRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListClothesCategoriesResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetClothesCategories();
+        return new ListClothesCategoriesResponse { Success = true, Categories = data.ConvertAll(c => c.ToDto()) };
+    }
+}
+
+public class ListClothesStatusesHandler(HorizonAuthClient identity, ClothesService svc)
+    : IHorizonRequestHandler<ListClothesStatusesRequest, ListClothesStatusesResponse>
+{
+    public async Task<ListClothesStatusesResponse> HandleAsync(ListClothesStatusesRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListClothesStatusesResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetClothesStatuses();
+        return new ListClothesStatusesResponse { Success = true, Statuses = data.ConvertAll(s => s.ToDto()) };
+    }
+}
+
+public class ListClothesWashTypesHandler(HorizonAuthClient identity, ClothesService svc)
+    : IHorizonRequestHandler<ListClothesWashTypesRequest, ListClothesWashTypesResponse>
+{
+    public async Task<ListClothesWashTypesResponse> HandleAsync(ListClothesWashTypesRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListClothesWashTypesResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetClothesWashTypes();
+        return new ListClothesWashTypesResponse { Success = true, WashTypes = data.ConvertAll(w => w.ToDto()) };
+    }
+}
+
+public class ListClothesColorsHandler(HorizonAuthClient identity, ClothesService svc)
+    : IHorizonRequestHandler<ListClothesColorsRequest, ListClothesColorsResponse>
+{
+    public async Task<ListClothesColorsResponse> HandleAsync(ListClothesColorsRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListClothesColorsResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetClothesColors();
+        return new ListClothesColorsResponse { Success = true, Colors = data.ConvertAll(c => c.ToDto()) };
+    }
+}
+
+public class ListClothesColorStylesHandler(HorizonAuthClient identity, ClothesService svc)
+    : IHorizonRequestHandler<ListClothesColorStylesRequest, ListClothesColorStylesResponse>
+{
+    public async Task<ListClothesColorStylesResponse> HandleAsync(ListClothesColorStylesRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListClothesColorStylesResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetClothesColorStyles();
+        return new ListClothesColorStylesResponse { Success = true, ColorStyles = data.ConvertAll(s => s.ToDto()) };
+    }
+}
+
+public class ListClothesHandler(HorizonAuthClient identity, ClothesService svc)
+    : IHorizonRequestHandler<ListClothesRequest, ListClothesResponse>
+{
+    public async Task<ListClothesResponse> HandleAsync(ListClothesRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListClothesResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetClothesEntities(id.UserId);
+        return new ListClothesResponse { Success = true, Items = data.ConvertAll(e => e.ToDto()) };
+    }
+}
+
+public class ListClothesColorAssignmentsHandler(HorizonAuthClient identity, ClothesService svc)
+    : IHorizonRequestHandler<ListClothesColorAssignmentsRequest, ListClothesColorAssignmentsResponse>
+{
+    public async Task<ListClothesColorAssignmentsResponse> HandleAsync(ListClothesColorAssignmentsRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListClothesColorAssignmentsResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetColorAssignments(req.GarmentId);
+        return new ListClothesColorAssignmentsResponse { Success = true, Assignments = data.ConvertAll(a => a.ToDto()) };
+    }
+}
+
+// ── Admin (Processes) ───────────────────────────────────────────────────────
+
+public class ListAdminCategoriesHandler(HorizonAuthClient identity, AdminService svc)
+    : IHorizonRequestHandler<ListAdminCategoriesRequest, ListAdminCategoriesResponse>
+{
+    public async Task<ListAdminCategoriesResponse> HandleAsync(ListAdminCategoriesRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListAdminCategoriesResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetAdminCategories();
+        return new ListAdminCategoriesResponse { Success = true, Categories = data.ConvertAll(c => c.ToDto()) };
+    }
+}
+
+public class ListAdminHandler(HorizonAuthClient identity, AdminService svc)
+    : IHorizonRequestHandler<ListAdminRequest, ListAdminResponse>
+{
+    public async Task<ListAdminResponse> HandleAsync(ListAdminRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListAdminResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetAdminEntities(id.UserId);
+        return new ListAdminResponse { Success = true, Items = data.ConvertAll(e => e.ToDto()) };
+    }
+}
+
+public class ListAdminSubEntitiesHandler(HorizonAuthClient identity, AdminService svc)
+    : IHorizonRequestHandler<ListAdminSubEntitiesRequest, ListAdminSubEntitiesResponse>
+{
+    public async Task<ListAdminSubEntitiesResponse> HandleAsync(ListAdminSubEntitiesRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListAdminSubEntitiesResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetAdminSubEntities(new() { Id = req.ProcessId });
+        return new ListAdminSubEntitiesResponse { Success = true, Steps = data.ConvertAll(e => e.ToDto()) };
+    }
+}
+
+public class GetAdminStatsHandler(HorizonAuthClient identity, AdminService svc)
+    : IHorizonRequestHandler<GetAdminStatsRequest, GetAdminStatsResponse>
+{
+    public async Task<GetAdminStatsResponse> HandleAsync(GetAdminStatsRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new GetAdminStatsResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetAdminStats(req.ProcessId);
+        return new GetAdminStatsResponse { Success = true, Stats = data.ToDto() };
+    }
+}
