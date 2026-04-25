@@ -1,222 +1,279 @@
 ﻿# AGENTS.md
 
-## Architecture
+Guía operativa para agentes que trabajen en `Armali.Horizon`. Este archivo debe reflejar el estado real del repositorio. Si una tarea cambia arquitectura, comandos, proyectos, Docker, autenticación, estilo compartido o convenciones de módulo, actualiza este documento dentro de la misma tarea.
 
-This is a .NET 10 Blazor Server solution (`.slnx`) with seven projects in a layered dependency graph:
+## Reglas Para Agentes
 
-```
-Armali.Horizon.Core       (shared: logging via Serilog/Seq, identity model, LINQ extensions)
-    ↑
-Armali.Horizon.IO         (Redis pub/sub events with Zstd-compressed payloads)
-    ↑
-Armali.Horizon.Contracts  (cross-app payloads & client wrappers — currently hosts Identity contracts)
-Armali.Horizon.Blazor     (reusable Razor component library + Tailwind CSS design system)
-    ↑
-Armali.Horizon.Segaris    (Blazor Server app — EF Core SQLite, domain services, pages)
-Armali.Horizon.Autoconfig (Blazor Server app — config provisioning, EF Core SQLite)
-Armali.Horizon.Identity   (Blazor Server app — central auth/users/roles/tokens, exposes everything via IO)
-```
+- Antes de modificar código, revisa el contexto local con `rg`, `rg --files`, `dotnet test --list-tests` o lecturas puntuales. No asumas que este archivo está perfecto.
+- Mantén los cambios dentro del patrón existente. No introduzcas frameworks, iconos, estilos, stores, clientes HTTP o abstracciones nuevas si ya hay una forma Horizon de hacerlo.
+- Si cambias comportamiento compartido, añade o ajusta pruebas en el proyecto `test/` correspondiente.
+- Si cambias una convención documentada aquí, edita `AGENTS.md` en el mismo cambio. Si descubres que una regla estaba obsoleta, corrígela.
+- No reviertas cambios ajenos del árbol de trabajo. Ahora mismo pueden aparecer ficheros SQLite auxiliares (`*.db-wal`, `*.db-shm`) o cambios de configuración local.
+- Los comentarios inline del código deben escribirse en español. Los summaries de API pueden estar en español o inglés.
 
-**Segaris**, **Autoconfig** and **Identity** are runnable applications; **Blazor**, **Contracts**, **IO** and **Core** are reusable libraries shared across apps. All three apps depend on Blazor → Core, Contracts → IO/Core, and pull IO directly to publish/consume events.
+## Arquitectura
 
-The `test/` folder mirrors the main code with four MSTest projects: `Armali.Horizon.Core.Tests`, `Armali.Horizon.IO.Tests`, `Armali.Horizon.Segaris.Tests`, and `Armali.Horizon.Autoconfig.Tests`.
+Solución .NET 10 Blazor Server (`Armali.Horizon.slnx`) con siete proyectos:
 
-## Build & Run
-
-- **Tailwind CSS** is compiled at build time via a local `tailwindcss.exe` binary (no npm). All app projects (`Armali.Horizon.Blazor`, `Armali.Horizon.Segaris`, `Armali.Horizon.Autoconfig`, `Armali.Horizon.Identity`) have a `TailwindBuild` MSBuild target that runs `.\tailwindcss.exe -i .\wwwroot\app.css -o .\wwwroot\tailwind.css --minify`. Pass `/p:SkipTailwindBuild=true` to skip it (used in Docker builds after a manual Tailwind step).
-- Run Segaris: `dotnet run --project src/Armali.Horizon.Segaris`
-- Run Autoconfig: `dotnet run --project src/Armali.Horizon.Autoconfig`
-- Run Identity: `dotnet run --project src/Armali.Horizon.Identity`
-- Run all tests: `dotnet test Armali.Horizon.slnx /p:SkipTailwindBuild=true`
-- EF Core migrations: `dotnet ef migrations add <Name> --project src/Armali.Horizon.<App>` (Segaris / Autoconfig / Identity). The Identity project pins `Microsoft.EntityFrameworkCore.Design 10.0.6` explicitly to avoid a transitive 8.0.0 pulled by `Microsoft.AspNetCore.App.Internal.Assets`.
-- Docker (single): `docker build -f src/Armali.Horizon.<App>/Dockerfile .`
-- Docker (compose): `docker-compose up` — `docker-compose.yml` is at the repository root
-
-## Design System & Styling
-
-All colors and fonts are defined as CSS custom properties in `src/Armali.Horizon.Blazor/wwwroot/app.css` under `@theme`. Use the `hz-*` prefix for all color tokens (e.g., `bg-hz-opera`, `text-hz-arendelle`). Key tokens:
-- **hz-styx / hz-spartan / hz-gray**: background tones (dark); `hz-gray-light` for lighter variant
-- **hz-arendelle**: primary text color (light); **hz-artemisia**: secondary text color (cool light)
-- **hz-opera** (green), **hz-tribunal** (red), **hz-apollo** (blue), **hz-sol** (yellow): accent actions — each has a `*-light` hover variant (e.g., `hz-opera-light`)
-- **hz-tefiti** (teal), **hz-meridian** (gold): additional accent tokens
-- Fonts: `font-hz-header` (League Spartan), `font-hz-text` (Nunito Medium), `font-hz-special` (Nunito Extrabold)
-
-Icons use **Font Awesome 6 Solid** (`fa-solid fa-*`). Never import other icon sets.
-
-## Component Patterns (Armali.Horizon.Blazor)
-
-### Page layout
-Every Segaris page follows this skeleton — see `Capex.razor` as the canonical example:
-```razor
-<HorizonAuthentication @bind-User="CurrentUser" OnAuthenticated="LoadData" />
-<HorizonLayout AppName="Segaris" PageName="PageTitle">
-    <Sidebar> ... HorizonHeroButton ... </Sidebar>
-    <SidebarBottom> ... </SidebarBottom>
-    <Body> ... HorizonTable ... </Body>
-</HorizonLayout>
-```
-`OnAuthenticated` fires after the user session is resolved — use it to trigger initial data loads that depend on the current user identity.
-
-Autoconfig pages reuse the same authentication/layout/table shell — see `src/Armali.Horizon.Autoconfig/Components/Pages/Nodes.razor`.
-
-### Table with filtering
-`HorizonTable<TItem>` is generic and paginated. Columns are declared with `<HorizonCellHeader>` (set `Filterable="true"` + `ValueSelector` for filter support). Rows use `<RowTemplate>` with typed cell components (`HorizonCellText`, `HorizonCellTwoLine`, `HorizonCellCurrency`, `HorizonCellDateTime`, `HorizonCellStatus`, `HorizonCellBoolean`, `HorizonCellButtons`). For non-data-bound reference tables use `HorizonStaticTable` with `HorizonStaticTableHeader` / `HorizonStaticTableRow` / `HorizonStaticTableCell`.
-
-### CRUD popup flow
-All modules use the same pattern: `PopupIntent` enum (`None`, `Create`, `Edit`) + `ShowEditPopup`/`ShowDeletePopup` bools controlling `<HorizonPopup>` → `<HorizonDialog>` → `<HorizonForm>` with `<HorizonFormCell>` wrappers.
-
-When an FK link needs a searchable chooser instead of a plain combobox, pages use `HorizonEntityLink` plus selector popups such as `ProjectSelectorPopup` (`Capex.razor`, `Opex.razor`, `Travel.razor`, `Assets.razor`) and `AssetSelectorPopup` (`Maintenance.razor`).
-
-### Model marker interfaces
-Domain models implement interfaces from `src/Armali.Horizon.Blazor/Utils.cs`: `Identifiable` (has `Id`), `Nameable` (has `Name`), `Colorable` (has `Color`). These are required by components like `HorizonCellStatus` and the `Utils.Index()` helper.
-
-## Domain Module Convention (Segaris)
-
-Each business module (Capex, Opex, Assets, Travel, Project, Archive, Maintenance, Firebird, Clothes, Mood, Inventory) follows the **same triple**:
-1. **Model** (`Model/{Module}Model.cs`): `{Module}Entity`, `{Module}Category`, `{Module}Status` — entities use FK integers (`CategoryId`, `StatusId`) with `[ForeignKey]` attributes. Some modules add extra lookup types (e.g., `TravelCostCenter`, `ProjectProgram`, `ClothesWashType`) or sub-entities (`OpexSubEntity`, `TravelSubEntity`, `ProjectSubEntity`, `FirebirdSubEntity`, `InvOrderSubEntity`).
-2. **Service** (`Services/{Module}Service.cs`): scoped DI service that injects `IDbContextFactory<SegarisDbContext>` and creates short-lived `DbContext` instances per operation (`await using var context = Factory.CreateDbContext()`). `DatalakeService` is a shared service for Azure Data Lake file operations (used by Archive and Project modules).
-3. **Page** (`Components/Pages/{Module}.razor`): Razor page using the layout/table/popup pattern above. Some modules intentionally span multiple pages while keeping one model/service layer — Inventory uses `InvVendors.razor`, `InvItems.razor`, and `InvOrder.razor`; companion info/calendar pages include `AssetsCode.razor`, `ClothesCode.razor`, and `FirebirdCalendar.razor`.
-
-When adding a new module, replicate this triple and register the service in `Program.cs` with `builder.Services.AddScoped<{Module}Service>()`.
-
-## Key Conventions
-
-- **Authentication**: centralized in `Armali.Horizon.Identity`, accessed by other apps exclusively through the IO bus on the `identity` channel (see the dedicated section below). `HorizonSessionService` stores the resulting `HorizonIdentity` (now including `Roles[]` and the bearer `Token`) in browser `localStorage` under key `"Horizon:Session"`. Pages gate access via `<HorizonAuthentication>`, which on every render revalidates the cached token via `identity.auth.whoami` and redirects to `/horizon/login` if it has expired or been revoked. The component exposes both the legacy `@bind-User` (UserId string) and the new `@bind-Identity` (full `HorizonIdentity`) for permission checks via `identity.HasRole("...")`.
-- **Privacy model**: entities with user-scoped visibility have `bool IsPrivate` + `string Creator` fields. Services filter with `.Where(e => !e.IsPrivate || e.Creator == userId)`. Use `Utils.PrivacyIcon()` / `Utils.PrivacyColor()` for rendering the lock/globe/share icon in `HorizonCellTwoLine`.
-- **DbContextFactory pattern**: services inject `IDbContextFactory<SegarisDbContext>` (not `SegarisDbContext` directly) and create short-lived contexts per method. This avoids concurrency issues in Blazor Server's long-lived scopes.
-- **Autoconfig service pattern**: `AutoconfigService` mirrors the same approach with `IDbContextFactory<AutoconfigDbContext>` and short-lived contexts per method.
-- **Production migrations**: both apps call `Database.Migrate()` automatically when `!app.Environment.IsDevelopment()` in `Program.cs`.
-- **Static helper `Index()`**: imported globally via `using static Armali.Horizon.Segaris.Services.Utils` in `_Imports.razor` — used to look up Category/Status by FK id in Razor templates.
-- **No Include() on EF queries**: services use `AsNoTracking()` and resolve FK references via the `Index()` helper at render time instead of eager loading navigation properties.
-- **Data Lake credential**: `src/Armali.Horizon.Segaris/Services/DatalakeService.cs` reads `DATALAKE_ACCOUNT_KEY` from the environment in its constructor; Archive/Project file operations depend on it.
-- **Tests**: `test/Directory.Build.props` centralizes `net10.0`, MSTest, and Shouldly. Service tests instantiate services directly with `TestDbContextFactory` (`SQLite in-memory`) instead of booting the Blazor apps.
-- **C# 14 extensions**: `src/Armali.Horizon.Core/Linq/HorizonExtensions.cs` uses the new `extension<T>` syntax (requires .NET 10 / C# 14).
-- **Comments and docs in Spanish**: inline code comments are written in Spanish; public API summaries may be in either language.
-
-## Inter-Process Communication (Armali.Horizon.IO)
-
-### Overview
-
-`Armali.Horizon.IO` provides a Redis pub/sub messaging layer with Zstd-compressed payloads. It supports two communication patterns:
-
-| Pattern | Use case |
+| Proyecto | Rol |
 |---|---|
-| **Fire-and-forget** | `PublishAsync<T>` + `Subscribe<T>` — emit events without expecting a reply |
-| **Request/Response** | `RequestAsync<TResponse>` (caller) + `IHorizonRequestHandler<TReq,TRes>` (responder) — send a request and await a typed response with timeout |
+| `Armali.Horizon.Core` | Utilidades compartidas: logging Serilog/Seq, `HorizonIdentity`, extensiones LINQ C# 14. |
+| `Armali.Horizon.IO` | Bus Redis pub/sub con payloads JSON comprimidos con Zstd; soporta publish/subscribe y request/response. |
+| `Armali.Horizon.Contracts` | Contratos entre apps. Actualmente concentra payloads, DTOs, canal y cliente de `Identity`. |
+| `Armali.Horizon.Blazor` | Librería de componentes Razor, layout, autenticación visual, sesión local y design system Tailwind. |
+| `Armali.Horizon.Segaris` | App Blazor Server principal: módulos de negocio, EF Core SQLite, Azure Data Lake. |
+| `Armali.Horizon.Autoconfig` | App Blazor Server para aprovisionamiento/configuración, EF Core SQLite, Azure Data Lake. |
+| `Armali.Horizon.Identity` | App Blazor Server central de usuarios, roles, sesiones y API keys; expone operaciones vía IO. |
 
-Every message travels inside a `HorizonEvent` envelope:
-```
-HorizonEvent
-├── EventId        (Guid — unique per message)
-├── EventType      (string — identifies the operation, e.g. "autoconfig.nodes.get")
-├── Payload        (byte[] — Zstd-compressed, JSON-serialized payload)
-├── CorrelationId  (Guid? — links a request to its response; null for fire-and-forget)
-└── ReplyTo        (string? — Redis channel for the response; null for fire-and-forget)
-```
+Dependencias principales:
 
-### Configuration
+```text
+Core
+  <- IO
+  <- Contracts
+  <- Blazor
 
-Add to `appsettings.json`:
-```json
-{
-  "Horizon": {
-    "Events": {
-      "Endpoint": "localhost:6379",
-      "DefaultTimeoutSeconds": 10
-    }
-  }
-}
+Segaris / Autoconfig / Identity
+  -> Blazor
+  -> Contracts
+  -> IO
+  -> Core
 ```
 
-### Registering the event system
+`Segaris`, `Autoconfig` e `Identity` son ejecutables. `Core`, `IO`, `Contracts` y `Blazor` son librerías compartidas.
 
-In `Program.cs`, call `UseHorizonEvents()` on the host builder:
+## Comandos
+
+- Ejecutar Segaris: `dotnet run --project src/Armali.Horizon.Segaris`
+- Ejecutar Autoconfig: `dotnet run --project src/Armali.Horizon.Autoconfig`
+- Ejecutar Identity: `dotnet run --project src/Armali.Horizon.Identity`
+- Tests: `dotnet test Armali.Horizon.slnx /p:SkipTailwindBuild=true`
+- Migraciones EF: `dotnet ef migrations add <Name> --project src/Armali.Horizon.<App>`
+- Docker imagen individual: `docker build -f src/Armali.Horizon.<App>/Dockerfile .`
+- Docker compose producción/registry: `docker compose up` o `docker compose -f docker-compose.yml up`
+- Docker compose local/build: `docker compose -f docker-compose.local.yml up --build`
+
+Tailwind se compila en build con un binario local `tailwindcss.exe` en los proyectos app y en `Armali.Horizon.Blazor`. Para builds de Docker o tests, usa `/p:SkipTailwindBuild=true` cuando Tailwind ya se ha generado aparte o no es relevante.
+
+## Configuración Y Docker
+
+La configuración vive bajo `Horizon` en `appsettings*.json`:
+
+- `Horizon:ConnectionStrings:<App>` apunta a SQLite.
+- `Horizon:Events:Endpoint` apunta a Redis (`localhost:6379` local, `horizon-redis:6379` en compose).
+- `Horizon:Events:DefaultTimeoutSeconds` controla timeouts de request/response IO.
+- `Horizon:Logging:*` configura Serilog/Seq mediante `UseHorizonLogging()`.
+- `Horizon:Seed:*` existe en Identity para crear el usuario inicial si la base está vacía.
+
+`docker-compose.yml` despliega imágenes de `olyssia.azurecr.io` con volúmenes en `/data/volumes/...`. `docker-compose.local.yml` construye desde los Dockerfile locales y usa volúmenes con nombre. Ambos levantan `redis`, `identity`, `segaris` y `autoconfig`.
+
+Puertos actuales:
+
+| Servicio | Puerto |
+|---|---:|
+| Identity | 5149 |
+| Segaris | 5122 |
+| Autoconfig | 5004 |
+| Redis | 6379 |
+
+Variables relevantes: `HORIZON_SEQ_ENDPOINT`, `HORIZON_SEQ_APIKEY`, `DATALAKE_ACCOUNT_KEY`, `IDENTITY_SEED_USER`, `IDENTITY_SEED_PASSWORD`.
+
+Los Dockerfile descargan Tailwind standalone para Linux, compilan `Armali.Horizon.Blazor/wwwroot/app.css` y el CSS de la app, y luego ejecutan `dotnet build/publish` con `SkipTailwindBuild=true`.
+
+## Autenticación E Identity
+
+La autenticación está centralizada en `Armali.Horizon.Identity`. Las otras apps no deben gestionar usuarios localmente ni consultar la base de Identity: hablan con Identity por el bus IO en el canal `IdentityChannels.Channel` (`"identity"`).
+
+Piezas principales:
+
+- Contratos y cliente: `src/Armali.Horizon.Contracts/Identity`.
+- Identidad compartida: `src/Armali.Horizon.Core/Model/HorizonIdentity.cs`.
+- Handlers IO de Identity: `src/Armali.Horizon.Identity/Handlers`.
+- Servicio de dominio: `src/Armali.Horizon.Identity/Services/IdentityService.cs`.
+- UI Identity: `Users`, `Sessions`, `ApiKeys`, `Profile`, `Home`.
+
+`HorizonSessionService` guarda `HorizonIdentity` en `localStorage` con la clave `"Horizon:Session"`. `HorizonAuthentication` lee esa sesión, valida el token con `identity.auth.whoami`, refresca roles si han cambiado y redirige a `/horizon/login` si no hay sesión válida. Si falla el bus IO durante la validación, usa la caché local para no bloquear la app por una caída temporal de red.
+
+En páginas nuevas, prefiere:
+
+```razor
+<HorizonAuthentication @bind-Identity="CurrentUser" OnAuthenticated="LoadData" />
+```
+
+`@bind-User` sigue existiendo por compatibilidad y devuelve sólo `UserId`. Para permisos usa `CurrentUser?.HasRole("admin")` o `IdentityChannels.AdminRole`.
+
+Identity emite tokens de sesión al hacer login. Las API keys se crean desde `CreateTokenRequest`; actualmente se crean para el usuario autenticado y son permanentes aunque el contrato tenga campos para expiración/usuario destino.
+
+## Bus IO
+
+`Armali.Horizon.IO` transporta `IHorizonEventPayload` dentro de `HorizonEvent`:
+
+- `EventId`: identificador único.
+- `EventType`: operación (`identity.auth.login`, `identity.users.list`, etc.).
+- `Payload`: JSON comprimido con Zstd.
+- `CorrelationId`: enlaza request/response.
+- `ReplyTo`: canal temporal de respuesta.
+
+Patrones:
+
+- Fire-and-forget: `PublishAsync<T>` + `Subscribe<T>`.
+- Request/response: `RequestAsync<TResponse>` + `IHorizonRequestHandler<TReq,TRes>`.
+
+Registro:
 
 ```csharp
-// Requester only (fire-and-forget + RequestAsync, no handlers):
+// Cliente sin handlers
 builder.Host.UseHorizonEvents();
 
-// Responder with handlers:
+// Servicio que responde peticiones
 builder.Host.UseHorizonEvents(events =>
 {
-    events.HandleRequest<GetNodesHandler, GetNodesRequest, GetNodesResponse>("autoconfig");
-    events.HandleRequest<GetAppsHandler, GetAppsRequest, GetAppsResponse>("autoconfig");
+    events.HandleRequest<LoginHandler, LoginRequest, LoginResponse>(IdentityChannels.Channel);
 });
 ```
 
-`HorizonEventService` is registered as a singleton and can be injected directly into any service or page.
+Los handlers se resuelven en un scope DI nuevo por petición, así que pueden inyectar servicios scoped. Las requests y responses deben implementar `IHorizonEventPayload`; usa `service.resource.action` y `:response` para respuestas.
 
-### Defining payloads (models)
+## Patrones Blazor
 
-Each operation needs a request and a response class implementing `IHorizonEventPayload`. The `EventType` string is the key that routes requests to the correct handler.
-
-```csharp
-// ── Request ──
-public class GetNodesRequest : IHorizonEventPayload
-{
-    public string EventType => "autoconfig.nodes.get";
-}
-
-// ── Response ──
-public class GetNodesResponse : IHorizonEventPayload
-{
-    public string EventType => "autoconfig.nodes.get:response";
-    public List<AutoconfigNode> Nodes { get; set; } = [];
-}
-```
-
-**Convention**: use `"service.resource.action"` for request EventType, and append `":response"` for the response EventType.
-
-### Implementing a handler (responder side)
+Las apps usan Razor Components con render interactivo server:
 
 ```csharp
-public class GetNodesHandler : IHorizonRequestHandler<GetNodesRequest, GetNodesResponse>
-{
-    private readonly AutoconfigService Svc;
-    public GetNodesHandler(AutoconfigService svc) => Svc = svc;
+builder.Services.AddRazorComponents()
+    .AddInteractiveServerComponents();
 
-    public async Task<GetNodesResponse> HandleAsync(GetNodesRequest request, CancellationToken ct = default)
-    {
-        var nodes = await Svc.GetNodes();
-        return new GetNodesResponse { Nodes = nodes };
-    }
-}
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies(typeof(Armali.Horizon.Blazor._Imports).Assembly);
 ```
 
-Handlers are resolved from DI with a **new scope per request**, so they can safely inject scoped services like `AutoconfigService`.
+Layout típico:
 
-### Sending a request (caller side)
-
-```csharp
-// Inject HorizonEventService in your service or page
-var response = await EventService.RequestAsync<GetNodesResponse>(
-    "autoconfig",                   // Redis channel
-    new GetNodesRequest(),          // request payload
-    TimeSpan.FromSeconds(5));       // optional timeout override
-
-var nodes = response.Nodes;         // typed result
+```razor
+<HorizonAuthentication @bind-Identity="CurrentUser" OnAuthenticated="LoadData" />
+<HorizonLayout AppName="Segaris" PageName="PageTitle">
+    <Sidebar> ... </Sidebar>
+    <SidebarBottom> ... </SidebarBottom>
+    <Body> ... </Body>
+</HorizonLayout>
 ```
 
-### Adding a new operation (checklist)
+Tablas:
 
-1. **Define request + response payload classes** implementing `IHorizonEventPayload` (request needs parameterless constructor)
-2. **Implement `IHorizonRequestHandler<TReq, TRes>`** with the business logic
-3. **Register** the handler in `UseHorizonEvents(events => { events.HandleRequest<...>(...); })`
-4. **Call** `RequestAsync<TResponse>(channel, request)` from the caller side
+- Usa `HorizonTable<TItem>` para datos paginados.
+- Declara columnas con `HorizonCellHeader`; para filtros usa `Filterable="true"` y `ValueSelector`.
+- Usa celdas tipadas: `HorizonCellText`, `HorizonCellTwoLine`, `HorizonCellCurrency`, `HorizonCellDateTime`, `HorizonCellStatus`, `HorizonCellBoolean`, `HorizonCellButtons`.
+- Para tablas de referencia no paginadas usa `HorizonStaticTable`.
 
-No changes to the IO library itself are needed — only new model classes and handler implementations.
+CRUD:
 
-### Fire-and-forget usage
+- Usa `PopupIntent` (`None`, `Create`, `Edit`) y flags como `ShowEditPopup`/`ShowDeletePopup`.
+- El flujo común es `HorizonPopup` -> `HorizonDialog` -> `HorizonForm` -> `HorizonFormCell`.
+- Para enlaces FK con búsqueda, usa `HorizonEntityLink` y popups selector (`ProjectSelectorPopup`, `AssetSelectorPopup`, etc.) en vez de inventar controles nuevos.
 
-```csharp
-// Publisher
-await eventService.PublishAsync("notifications", new AlertPayload { ... });
+## Diseño Y Estilo
 
-// Subscriber (call once, e.g. in StartAsync or OnInitialized)
-eventService.Subscribe<AlertPayload>("notifications", payload =>
-{
-    Console.WriteLine($"Alert: {payload.Message}");
-});
+Los tokens de diseño viven en `src/Armali.Horizon.Blazor/wwwroot/app.css` bajo `@theme`. Usa clases Tailwind con tokens `hz-*`:
+
+- Fondos: `hz-styx`, `hz-spartan`, `hz-gray`, `hz-gray-light`.
+- Texto: `hz-arendelle`, `hz-artemisia`.
+- Acciones/acento: `hz-opera`, `hz-tribunal`, `hz-apollo`, `hz-sol`, `hz-tefiti`, `hz-meridian` y variantes `*-light`.
+- Fuentes: `font-hz-header`, `font-hz-text`, `font-hz-special`.
+
+Iconos: Font Awesome 6 Solid local (`fa-solid fa-*`). No importes otros sets de iconos.
+
+Las apps pueden tener su propio `wwwroot/app.css`, pero deben apoyarse en la librería compartida y mantener consistencia visual. No conviertas páginas internas en landing pages; son herramientas de trabajo.
+
+## Datos Y Servicios
+
+Servicios de dominio:
+
+- Inyectan `IDbContextFactory<TDbContext>`, no el `DbContext` directamente.
+- Crean contextos cortos por operación con `await using var context = await Factory.CreateDbContextAsync()` o `Factory.CreateDbContext()`.
+- En consultas de lectura usa `AsNoTracking()`.
+- Evita `Include()` por defecto; resuelve catálogos por FK en UI con helpers como `Index()`. Hay excepciones reales cuando el método necesita navegar relaciones para una operación concreta, como parte de `ProjectService`.
+- Las apps aplican migraciones automáticamente en producción; Identity las aplica siempre al arrancar porque puede no existir la BD.
+
+Modelo de privacidad:
+
+- Entidades con visibilidad por usuario usan `bool IsPrivate` y `string Creator`.
+- Servicios filtran con `!e.IsPrivate || e.Creator == userId`.
+- En UI usa `Utils.PrivacyIcon()` y `Utils.PrivacyColor()`.
+
+Azure Data Lake:
+
+- Segaris usa `DatalakeService`; Archive y Project dependen de él.
+- Autoconfig usa `AutoconfigDatalakeService`.
+- Ambos leen `DATALAKE_ACCOUNT_KEY` del entorno.
+
+## Convención De Módulos Segaris
+
+Los módulos de negocio siguen una triple:
+
+1. Modelo: `src/Armali.Horizon.Segaris/Model/{Module}Model.cs`.
+2. Servicio: `src/Armali.Horizon.Segaris/Services/{Module}Service.cs`.
+3. Página(s): `src/Armali.Horizon.Segaris/Components/Pages/{Module}.razor`.
+
+Módulos actuales: Admin, Archive, Assets, Capex, Clothes, Expense/Expenses, Firebird, Inventory, Maintenance (`MaintService`/`MaintModel`), Mood, Opex, Project, Travel.
+
+Al añadir módulo:
+
+- Registra el servicio en `src/Armali.Horizon.Segaris/Program.cs`.
+- Añade `DbSet` y migración EF en `SegarisDbContext`.
+- Reutiliza layout, tabla, popup y componentes existentes.
+- Añade tests de servicio en `test/Armali.Horizon.Segaris.Tests`.
+
+Inventory usa varias páginas (`InvVendors`, `InvItems`, `InvOrder`) con un modelo/servicio común. Project y Firebird también tienen páginas auxiliares. Respeta esa organización si amplías módulos existentes.
+
+## Autoconfig
+
+Autoconfig sigue los mismos patrones de layout/autenticación, pero con `AutoconfigDbContext` y `AutoconfigService`. Módulos actuales:
+
+- `Nodes`
+- `Apps` y versiones
+- `Files` para operaciones de Data Lake
+
+Tests en `test/Armali.Horizon.Autoconfig.Tests` usan `TestDbContextFactory` y bUnit para páginas.
+
+Autoconfig también expone una operación request/response sobre IO en el canal `AutoconfigChannels.Channel` (`"autoconfig"`):
+
+- `autoconfig.config.get` (`GetConfigFileRequest` → `GetConfigFileResponse`): pide un archivo de configuración por `NodeName`, `AppName`, `Version` (`"A.B.C"`) y `FileName`. La petición es **anónima**: los archivos se consideran globales.
+- Resolución por fallback: (1) Major.Minor.Patch exacto, (2) mismo Major.Minor con Patch más alto, (3) mismo Major con Minor.Patch más altos. Si la versión candidata no contiene el archivo, se descarta y se sigue. `ResolvedVersion` es la versión real desde la que se ha servido.
+- El contenido se devuelve como `string` UTF-8. Si los bytes no son UTF-8 válidos se responde `not_text`. El tamaño máximo se controla con `Horizon:Autoconfig:MaxFileBytes` (env `Horizon__Autoconfig__MaxFileBytes`, por defecto 2 MB) y se devuelve `too_large` si se supera.
+- Cliente recomendado: `HorizonAutoconfigClient` en `Armali.Horizon.Contracts.Autoconfig`. No reimplementes el request en cada app.
+
+## Identity
+
+Identity tiene UI propia y handlers IO. El rol administrativo compartido es `IdentityChannels.AdminRole` (`"admin"`).
+
+Reglas:
+
+- Las operaciones admin deben validar con `AuthAdminAsync`.
+- Las operaciones autenticadas no admin validan con `AuthAsync`.
+- No permitas que un admin se borre a sí mismo ni se quite su propio rol `admin`.
+- No devuelvas tokens en claro salvo en la respuesta inmediata a su creación.
+- `TokenCleanupService` elimina o revoca periódicamente tokens expirados/revocados según la lógica de `IdentityService`.
+
+## Tests
+
+El árbol `test/` tiene cuatro proyectos:
+
+- `Armali.Horizon.Core.Tests`
+- `Armali.Horizon.IO.Tests`
+- `Armali.Horizon.Segaris.Tests`
+- `Armali.Horizon.Autoconfig.Tests`
+
+`test/Directory.Build.props` centraliza `net10.0`, MSTest, Shouldly, `Microsoft.NET.Test.Sdk` y bUnit. Los tests de servicios instancian servicios con `TestDbContextFactory` y SQLite in-memory; evita arrancar apps completas para probar lógica de dominio.
+
+Ejecuta al menos los tests afectados. Para cambios transversales, ejecuta:
+
+```powershell
+dotnet test Armali.Horizon.slnx /p:SkipTailwindBuild=true
 ```
 
+## Checklist Al Terminar
 
+- Compila o prueba el área afectada, salvo que haya un bloqueo explícito.
+- Revisa `git diff` para evitar cambios accidentales.
+- Actualiza `AGENTS.md` si cambiaste o descubriste convenciones relevantes.
+- Menciona en la respuesta final qué pruebas ejecutaste y cualquier riesgo pendiente.

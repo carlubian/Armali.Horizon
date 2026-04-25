@@ -16,6 +16,7 @@
 #   - DATALAKE_ACCOUNT_KEY   → Clave de Azure Data Lake (Segaris y Autoconfig)
 #   - IDENTITY_SEED_USER     → Usuario inicial de Identity (por defecto: admin)
 #   - IDENTITY_SEED_PASSWORD → Contraseña del usuario inicial (por defecto: admin)
+#   - AUTOCONFIG_MAX_FILE_BYTES → Tamaño máximo en bytes del archivo devuelto vía IO (por defecto: 2 MB)
 ###############################################################################
 
 services:
@@ -96,6 +97,7 @@ services:
       - Horizon__Logging__Endpoint=${HORIZON_SEQ_ENDPOINT:-http://node1.armali.com:5341}
       - Horizon__Logging__ApiKey=${HORIZON_SEQ_APIKEY:-}
       - Horizon__Logging__MinimumLevel=Information
+      - Horizon__Autoconfig__MaxFileBytes=${AUTOCONFIG_MAX_FILE_BYTES:-2097152}
       - DATALAKE_ACCOUNT_KEY=${DATALAKE_ACCOUNT_KEY:-}
     depends_on:
       - redis

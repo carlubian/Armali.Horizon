@@ -15,15 +15,15 @@
 
             @if (IsAdmin)
             {
-                <HorizonCard Title="Users" Image="/images/temp.png" OnClick="@(() => Nav.NavigateTo("/users"))" />
+                <HorizonCard Title="Users" Image="/images/users.png" OnClick="@(() => Nav.NavigateTo("/users"))" />
             }
             else
             {
                 <div />
             }
-            <HorizonCard Title="API keys" Image="/images/temp.png" OnClick="@(() => Nav.NavigateTo("/tokens"))" />
-            <HorizonCard Title="Sessions" Image="/images/temp.png" OnClick="@(() => Nav.NavigateTo("/sessions"))" />
-            <HorizonCard Title="Profile" Image="/images/temp.png" OnClick="@(() => Nav.NavigateTo("/profile"))" />
+            <HorizonCard Title="API keys" Image="/images/apikeys.png" OnClick="@(() => Nav.NavigateTo("/tokens"))" />
+            <HorizonCard Title="Sessions" Image="/images/sessions.png" OnClick="@(() => Nav.NavigateTo("/sessions"))" />
+            <HorizonCard Title="Profile" Image="/images/profile.png" OnClick="@(() => Nav.NavigateTo("/profile"))" />
         </div>
     </Body>
 </HorizonLayout>
