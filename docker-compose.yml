@@ -8,6 +8,7 @@
 #   - Identity:   5149
 #   - Segaris:    5122
 #   - Autoconfig: 5004
+#   - MCP:        5180
 #   - Redis:      6379
 #
 # Variables de entorno configurables (se pueden sobreescribir con un .env):
@@ -103,3 +104,26 @@ services:
       - redis
       - identity
     restart: unless-stopped
+
+  # ─── MCP ───────────────────────────────────────────────────────────────────────
+  # Servidor Model Context Protocol. Traduce tools MCP a peticiones IO sobre
+  # Identity y Segaris. La autenticación viaja en la cabecera X-Horizon-Api-Key
+  # de cada request HTTP entrante; el servidor no almacena credenciales.
+  mcp:
+    image: olyssia.azurecr.io/armali-horizon-mcp:latest
+    container_name: horizon-mcp
+    ports:
+      - "5180:5180"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Horizon__Events__Endpoint=horizon-redis:6379
+      - Horizon__Events__DefaultTimeoutSeconds=15
+      - Horizon__Logging__Endpoint=${HORIZON_SEQ_ENDPOINT:-http://node1.armali.com:5341}
+      - Horizon__Logging__ApiKey=${HORIZON_SEQ_APIKEY:-}
+      - Horizon__Logging__MinimumLevel=Information
+    depends_on:
+      - redis
+      - identity
+      - segaris
+    restart: unless-stopped
+

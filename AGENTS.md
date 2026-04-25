@@ -19,11 +19,12 @@ Solución .NET 10 Blazor Server (`Armali.Horizon.slnx`) con siete proyectos:
 |---|---|
 | `Armali.Horizon.Core` | Utilidades compartidas: logging Serilog/Seq, `HorizonIdentity`, extensiones LINQ C# 14. |
 | `Armali.Horizon.IO` | Bus Redis pub/sub con payloads JSON comprimidos con Zstd; soporta publish/subscribe y request/response. |
-| `Armali.Horizon.Contracts` | Contratos entre apps. Actualmente concentra payloads, DTOs, canal y cliente de `Identity`. |
+| `Armali.Horizon.Contracts` | Contratos entre apps. Concentra payloads, DTOs, canales y clientes de `Identity`, `Autoconfig` y `Segaris`. |
 | `Armali.Horizon.Blazor` | Librería de componentes Razor, layout, autenticación visual, sesión local y design system Tailwind. |
 | `Armali.Horizon.Segaris` | App Blazor Server principal: módulos de negocio, EF Core SQLite, Azure Data Lake. |
 | `Armali.Horizon.Autoconfig` | App Blazor Server para aprovisionamiento/configuración, EF Core SQLite, Azure Data Lake. |
 | `Armali.Horizon.Identity` | App Blazor Server central de usuarios, roles, sesiones y API keys; expone operaciones vía IO. |
+| `Armali.Horizon.MCP` | Servidor Model Context Protocol (HTTP). Expone tools MCP que traducen a peticiones request/response sobre el bus IO. No tiene UI ni base de datos. |
 
 Dependencias principales:
 
@@ -38,15 +39,21 @@ Segaris / Autoconfig / Identity
   -> Contracts
   -> IO
   -> Core
+
+MCP
+  -> Contracts
+  -> IO
+  -> Core
 ```
 
-`Segaris`, `Autoconfig` e `Identity` son ejecutables. `Core`, `IO`, `Contracts` y `Blazor` son librerías compartidas.
+`Segaris`, `Autoconfig`, `Identity` y `MCP` son ejecutables. `Core`, `IO`, `Contracts` y `Blazor` son librerías compartidas.
 
 ## Comandos
 
 - Ejecutar Segaris: `dotnet run --project src/Armali.Horizon.Segaris`
 - Ejecutar Autoconfig: `dotnet run --project src/Armali.Horizon.Autoconfig`
 - Ejecutar Identity: `dotnet run --project src/Armali.Horizon.Identity`
+- Ejecutar MCP: `dotnet run --project src/Armali.Horizon.MCP`
 - Tests: `dotnet test Armali.Horizon.slnx /p:SkipTailwindBuild=true`
 - Migraciones EF: `dotnet ef migrations add <Name> --project src/Armali.Horizon.<App>`
 - Docker imagen individual: `docker build -f src/Armali.Horizon.<App>/Dockerfile .`
@@ -65,7 +72,7 @@ La configuración vive bajo `Horizon` en `appsettings*.json`:
 - `Horizon:Logging:*` configura Serilog/Seq mediante `UseHorizonLogging()`.
 - `Horizon:Seed:*` existe en Identity para crear el usuario inicial si la base está vacía.
 
-`docker-compose.yml` despliega imágenes de `olyssia.azurecr.io` con volúmenes en `/data/volumes/...`. `docker-compose.local.yml` construye desde los Dockerfile locales y usa volúmenes con nombre. Ambos levantan `redis`, `identity`, `segaris` y `autoconfig`.
+`docker-compose.yml` despliega imágenes de `olyssia.azurecr.io` con volúmenes en `/data/volumes/...`. `docker-compose.local.yml` construye desde los Dockerfile locales y usa volúmenes con nombre. Ambos levantan `redis`, `identity`, `segaris`, `autoconfig` y `mcp`.
 
 Puertos actuales:
 
@@ -74,6 +81,7 @@ Puertos actuales:
 | Identity | 5149 |
 | Segaris | 5122 |
 | Autoconfig | 5004 |
+| MCP | 5180 |
 | Redis | 6379 |
 
 Variables relevantes: `HORIZON_SEQ_ENDPOINT`, `HORIZON_SEQ_APIKEY`, `DATALAKE_ACCOUNT_KEY`, `IDENTITY_SEED_USER`, `IDENTITY_SEED_PASSWORD`.
@@ -224,6 +232,70 @@ Al añadir módulo:
 - Añade tests de servicio en `test/Armali.Horizon.Segaris.Tests`.
 
 Inventory usa varias páginas (`InvVendors`, `InvItems`, `InvOrder`) con un modelo/servicio común. Project y Firebird también tienen páginas auxiliares. Respeta esa organización si amplías módulos existentes.
+
+### Bus IO de Segaris
+
+Segaris expone operaciones request/response de **lectura** sobre el canal `SegarisChannels.Channel` (`"segaris"`). Los handlers están en `src/Armali.Horizon.Segaris/Handlers` y siguen este patrón:
+
+1. Reciben un `*Request` que extiende `Identity.AuthenticatedRequest` (lleva `Token`).
+2. Llaman a `HorizonAuthClient.AuthAsync(req)` para validar el token contra Identity y resolver la `HorizonIdentity` actual.
+3. Si la identidad es null, devuelven `Success = false` + `SegarisErrorInfo` con código `unauthorized`.
+4. Si es válida, llaman al servicio de dominio y mapean entidad → DTO con `SegarisDtoMapper`.
+5. La privacidad se respeta usando `id.UserId` como filtro (`!IsPrivate || Creator == id.UserId`).
+
+Operaciones disponibles (todas en el canal `segaris`):
+
+- `segaris.project.programs.list`, `axes.list`, `statuses.list`, `subCategories.list`, `subEntities.list`, `riskCategories.list`, `risks.list`, `budgets.list`
+- `segaris.projects.list`
+- `segaris.asset.categories.list`, `statuses.list` y `segaris.assets.list`
+- `segaris.capex.categories.list`, `statuses.list`, `list`
+- `segaris.opex.categories.list`, `statuses.list`, `list`, `subEntries.list`, `stats.get`
+- `segaris.travel.categories.list`, `costCenters.list`, `statuses.list`, `subCategories.list`, `entries.list` y `segaris.travels.list`
+- `segaris.maint.categories.list`, `statuses.list`, `list`
+- `segaris.inv.vendorStatuses.list`, `vendors.list`, `vendorStats.get`, `itemCategories.list`, `itemStatuses.list`, `items.list`, `shoppingList.get`, `itemPriceHistory.get`, `orderStatuses.list`, `orders.list`, `orderLines.list`, `orderStats.get`
+
+Cliente recomendado: `HorizonSegarisClient` en `Armali.Horizon.Contracts.Segaris`. No reimplementes los requests en cada app.
+
+Para añadir un nuevo handler de lectura:
+
+1. Define `Request`/`Response` en `SegarisPayloads.cs`. La request hereda de `AuthenticatedRequest`; la response implementa `ISegarisResponse`.
+2. Si la entidad no tiene DTO, añádelo a `SegarisDtos.cs` (sin nav properties).
+3. Crea el handler en `SegarisHandlers.cs` siguiendo el patrón Auth → Service → Map → Response.
+4. Añade el mapeo entidad→DTO en `SegarisDtoMapper.cs`.
+5. Registra el handler en `Program.cs` con `events.HandleRequest<...>(SegarisChannels.Channel)`.
+6. Añade el método correspondiente al `HorizonSegarisClient`.
+7. Si va a exponerse vía MCP, añade la tool en `Armali.Horizon.MCP/Tools/`.
+
+## MCP
+
+`Armali.Horizon.MCP` es un servidor [Model Context Protocol](https://modelcontextprotocol.io) HTTP que expone funcionalidad Horizon como tools MCP para clientes LLM (Codex y similares). El proyecto usa el SDK oficial `ModelContextProtocol.AspNetCore` y se integra con el resto del sistema:
+
+- `UseHorizonLogging()` para Serilog/Seq.
+- `UseHorizonEvents()` como cliente puro del bus IO (sin handlers).
+- Reutiliza `HorizonAuthClient` y `HorizonSegarisClient` de `Contracts`.
+
+Reglas:
+
+- El servidor MCP **no almacena credenciales**. Cada request HTTP entrante debe traer la cabecera `X-Horizon-Api-Key` con un token válido emitido por Identity (sesión o API key permanente).
+- `HorizonApiKeyAccessor` lee esa cabecera y la inyecta en los clientes Horizon a través del scope DI de cada petición.
+- Las tools viven en `src/Armali.Horizon.MCP/Tools/` agrupadas por módulo (`SegarisProjectMcpTools`, `SegarisAssetMcpTools`, etc.). Cada operación expone una tool independiente con descripciones `[Description]` para que el LLM entienda qué hace.
+- Por ahora sólo se exponen tools de **lectura** sobre Segaris e Identity (`whoami`). Las mutaciones se añadirán explícitamente.
+- Endpoint MCP: `http://host:5180/mcp` (transporte Streamable HTTP, modo stateless). Health check en `/health`.
+
+Configuración del cliente Codex (ejemplo):
+
+```toml
+[mcp_servers.horizon]
+url = "http://localhost:5180/mcp"
+headers = { "X-Horizon-Api-Key" = "<API_KEY_DE_IDENTITY>" }
+```
+
+Para añadir una tool:
+
+1. Asegúrate de tener el contrato y el handler IO en Segaris (ver sección anterior).
+2. Añade el método al `HorizonSegarisClient` correspondiente.
+3. En `Tools/`, en la clase del módulo, añade un método estático `[McpServerTool]` con `[Description]` y argumentos tipados.
+4. Devuelve el resultado vía `SegarisToolHelpers.Wrap` para que los errores se propaguen como `{ success: false, errorCode, errorMessage }`.
 
 ## Autoconfig
 
