@@ -9,25 +9,42 @@ namespace Armali.Horizon.Autoconfig.Services;
 /// </summary>
 public class AutoconfigDatalakeService
 {
-#pragma warning disable CS8618
-    // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
-    private static DataLakeServiceClient ServiceClient;
-    private static DataLakeFileSystemClient FileSystemClient;
-#pragma warning restore CS8618
+    private static DataLakeServiceClient? ServiceClient;
+    private static DataLakeFileSystemClient? FileSystemClient;
     
     // Credentials — la clave se lee de la variable de entorno DATALAKE_ACCOUNT_KEY
     private static string AccountName = "armali";
     private static string ContainerName = "autoconfig";
 
+    /// <summary>
+    /// Indica si el servicio está disponible (la clave de Data Lake estaba configurada
+    /// al momento de la primera inicialización).
+    /// </summary>
+    public bool IsAvailable { get; private set; }
+
     public AutoconfigDatalakeService()
     {
-        var AccountKey = Environment.GetEnvironmentVariable("DATALAKE_ACCOUNT_KEY")
-            ?? throw new InvalidOperationException("La variable de entorno 'DATALAKE_ACCOUNT_KEY' no está configurada.");
+        var accountKey = Environment.GetEnvironmentVariable("DATALAKE_ACCOUNT_KEY");
+        if (string.IsNullOrEmpty(accountKey))
+        {
+            // Sin clave no se puede operar, pero no impedimos que el resto del sistema
+            // funcione. Las operaciones de Data Lake lanzarán cuando se invoquen.
+            IsAvailable = false;
+            return;
+        }
 
-        var SharedKeyCredential = new StorageSharedKeyCredential(AccountName, AccountKey);
-
-        ServiceClient = new DataLakeServiceClient(new Uri($"https://{AccountName}.blob.core.windows.net/{ContainerName}"), SharedKeyCredential);
+        var sharedKeyCredential = new StorageSharedKeyCredential(AccountName, accountKey);
+        ServiceClient = new DataLakeServiceClient(new Uri($"https://{AccountName}.blob.core.windows.net/{ContainerName}"), sharedKeyCredential);
         FileSystemClient = ServiceClient.GetFileSystemClient(ContainerName);
+        IsAvailable = true;
+    }
+
+    /// <summary>Lanza si el servicio no tiene credenciales configuradas.</summary>
+    private void EnsureAvailable()
+    {
+        if (!IsAvailable)
+            throw new InvalidOperationException(
+                "La variable de entorno 'DATALAKE_ACCOUNT_KEY' no está configurada o está vacía.");
     }
 
     /// <summary>
@@ -35,8 +52,9 @@ public class AutoconfigDatalakeService
     /// </summary>
     public async Task UploadFileAsync(Stream content, string nodeName, string appName, string versionName, string fileName)
     {
+        EnsureAvailable();
         var DirectoryPath = $"{nodeName}/{appName}/{versionName}";
-        var DirClient = FileSystemClient.GetDirectoryClient(DirectoryPath);
+        var DirClient = FileSystemClient!.GetDirectoryClient(DirectoryPath);
         await DirClient.CreateIfNotExistsAsync();
         var FileClient = DirClient.GetFileClient(fileName);
         await FileClient.UploadAsync(content, overwrite: true);
@@ -47,8 +65,9 @@ public class AutoconfigDatalakeService
     /// </summary>
     public async Task<Stream> GetFileAsync(string nodeName, string appName, string versionName, string fileName)
     {
+        EnsureAvailable();
         var DirectoryPath = $"{nodeName}/{appName}/{versionName}";
-        var DirClient = FileSystemClient.GetDirectoryClient(DirectoryPath);
+        var DirClient = FileSystemClient!.GetDirectoryClient(DirectoryPath);
         var FileClient = DirClient.GetFileClient(fileName);
         var DownloadResponse = await FileClient.ReadAsync();
         return DownloadResponse.Value.Content;
@@ -59,8 +78,9 @@ public class AutoconfigDatalakeService
     /// </summary>
     public async Task DeleteFileAsync(string nodeName, string appName, string versionName, string fileName)
     {
+        EnsureAvailable();
         var DirectoryPath = $"{nodeName}/{appName}/{versionName}";
-        var DirClient = FileSystemClient.GetDirectoryClient(DirectoryPath);
+        var DirClient = FileSystemClient!.GetDirectoryClient(DirectoryPath);
         var FileClient = DirClient.GetFileClient(fileName);
         await FileClient.DeleteIfExistsAsync();
     }

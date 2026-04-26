@@ -331,12 +331,16 @@ Reglas:
 
 ## Tests
 
-El árbol `test/` tiene cuatro proyectos:
+El árbol `test/` tiene cuatro proyectos unitarios incluidos en `Armali.Horizon.slnx`:
 
 - `Armali.Horizon.Core.Tests`
 - `Armali.Horizon.IO.Tests`
 - `Armali.Horizon.Segaris.Tests`
 - `Armali.Horizon.Autoconfig.Tests`
+
+Más un proyecto de smoke / integración **fuera** de la solución principal:
+
+- `Armali.Horizon.Smoke.Tests` (no está en `Armali.Horizon.slnx`).
 
 `test/Directory.Build.props` centraliza `net10.0`, MSTest, Shouldly, `Microsoft.NET.Test.Sdk` y bUnit. Los tests de servicios instancian servicios con `TestDbContextFactory` y SQLite in-memory; evita arrancar apps completas para probar lógica de dominio.
 
@@ -345,6 +349,45 @@ Ejecuta al menos los tests afectados. Para cambios transversales, ejecuta:
 ```powershell
 dotnet test Armali.Horizon.slnx /p:SkipTailwindBuild=true
 ```
+
+### Smoke tests (stack completo)
+
+`test/Armali.Horizon.Smoke.Tests` valida que el stack docker arranca y se comunica end-to-end. No está en `Armali.Horizon.slnx` para que `dotnet test Armali.Horizon.slnx` no lo dispare sin un stack en marcha. Lo ejecuta el workflow `.github/workflows/smoke.yml` en cada pull request a `main`.
+
+Cubre:
+
+- `/health` de Identity, Segaris, Autoconfig y MCP responde 200.
+- Login con el usuario seed (`armali/armali`) sobre el bus IO contra Identity.
+- `WhoAmI` con el token devuelto por login.
+- `segaris.project.statuses.list` autenticado (cadena cliente → Redis → Segaris → Identity).
+- Rechazo de `segaris.project.statuses.list` con token inválido.
+- `autoconfig.config.get` con datos inexistentes (basta con que el bus responda).
+
+No cubre (deliberado):
+
+- Operaciones que dependen de Azure Data Lake. CI no tiene `DATALAKE_ACCOUNT_KEY`.
+- Mutaciones (CRUDs vía UI o IO).
+- Páginas Razor concretas.
+
+Cada test está marcado con `[TestCategory("Smoke")]`. Endpoints y credenciales se pueden sobreescribir vía variables de entorno (`SMOKE_REDIS_ENDPOINT`, `SMOKE_*_HEALTH`, `IDENTITY_SEED_USER`, `IDENTITY_SEED_PASSWORD`) para apuntar a un stack remoto.
+
+Ejecución local equivalente al workflow:
+
+```powershell
+docker compose -f docker-compose.local.yml up -d --build
+# Espera a que /health responda en 5149, 5122, 5004, 5180
+dotnet test test/Armali.Horizon.Smoke.Tests
+docker compose -f docker-compose.local.yml down -v
+```
+
+Los warnings normales de arranque (DataProtection sobre `/home/app/.aspnet/DataProtection-Keys`, "No XML encryptor configured") **no** rompen el smoke porque la validación es por HTTP/health y request/response IO, nunca por parseo de logs.
+
+Para añadir un nuevo smoke test:
+
+1. Añade un método `[TestMethod, TestCategory("Smoke")]` en `HorizonStackSmokeTests` (o un nuevo TestClass del mismo proyecto).
+2. Reutiliza `Events`, `HorizonAuthClient`, `HorizonSegarisClient`, `HorizonAutoconfigClient` ya configurados.
+3. Si dependes de un puerto/endpoint nuevo, expónlo como variable de entorno `SMOKE_*` con default a `localhost`.
+4. No introduzcas dependencias con Data Lake ni datos seed específicos: usa operaciones que funcionen sobre BD vacía.
 
 ## Checklist Al Terminar
 

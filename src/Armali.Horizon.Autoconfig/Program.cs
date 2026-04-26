@@ -54,6 +54,11 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+
+// Endpoint de salud para smoke tests / readiness probes. Se mapea antes de
+// UseHttpsRedirection para que sea accesible por HTTP plano en contenedores.
+app.MapGet("/health", () => Results.Ok(new { status = "ok", app = "autoconfig" }));
+
 app.UseHttpsRedirection();
 
 app.UseAntiforgery();

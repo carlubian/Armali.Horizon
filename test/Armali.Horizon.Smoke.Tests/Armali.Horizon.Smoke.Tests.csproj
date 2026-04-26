@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <!--
+            Marca este proyecto como "smoke" para que pueda excluirse fácilmente
+            de la pasada normal de tests. Construido fuera de la solución
+            principal (Armali.Horizon.slnx) para que el CI rápido no intente
+            ejecutarlo: requiere un stack docker compose en marcha.
+        -->
+        <IsHorizonSmokeProject>true</IsHorizonSmokeProject>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\src\Armali.Horizon.Contracts\Armali.Horizon.Contracts.csproj" />
+    </ItemGroup>
+
+</Project>
+
+
