@@ -258,9 +258,10 @@ public class HorizonEventService : IHostedService
         RedisValue message,
         Dictionary<string, HandlerInvoker> handlers)
     {
+        HorizonEvent? jsonEvent = null;
         try
         {
-            var jsonEvent = JsonSerializer.Deserialize<HorizonEvent>((string?)message ?? "");
+            jsonEvent = JsonSerializer.Deserialize<HorizonEvent>((string?)message ?? "");
             if (jsonEvent == null) return;
             
             // Si no tiene ReplyTo, es un evento fire-and-forget — ignorar en el dispatcher
@@ -282,24 +283,52 @@ public class HorizonEventService : IHostedService
             var responseBytes = await invoker(decompressedRequest.ToArray(), ServiceProvider, CancellationToken.None);
             
             // Comprimir y enviar respuesta con el mismo CorrelationId
-            using var compressor = new Compressor();
-            var compressedResponse = compressor.Wrap(responseBytes);
-            
-            var responseEvent = new HorizonEvent
-            {
-                EventId = Guid.NewGuid(),
-                EventType = jsonEvent.EventType + ":response",
-                Payload = compressedResponse.ToArray(),
-                CorrelationId = jsonEvent.CorrelationId
-            };
-            
-            var json = JsonSerializer.Serialize(responseEvent);
-            await Database!.PublishAsync(RedisChannel.Literal(jsonEvent.ReplyTo), json);
+            await PublishReply(jsonEvent, responseBytes);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Error despachando petición");
+            Logger.LogError(ex, "Error despachando petición de tipo '{EventType}'",
+                jsonEvent?.EventType ?? "desconocido");
+            
+            // Intentamos enviar una respuesta de error para que el solicitante no
+            // se quede bloqueado en un timeout sin diagnóstico.
+            if (jsonEvent is { ReplyTo: not null, CorrelationId: not null })
+            {
+                try
+                {
+                    var errorPayload = JsonSerializer.SerializeToUtf8Bytes(new
+                    {
+                        Success = false,
+                        Error = new { Code = "internal", Message = ex.Message },
+                    });
+                    await PublishReply(jsonEvent, errorPayload);
+                }
+                catch (Exception replyEx)
+                {
+                    Logger.LogError(replyEx, "Error enviando respuesta de error al solicitante");
+                }
+            }
         }
+    }
+    
+    /// <summary>
+    /// Comprime y publica una respuesta a un evento con correlación.
+    /// </summary>
+    private async Task PublishReply(HorizonEvent request, byte[] responseBytes)
+    {
+        using var compressor = new Compressor();
+        var compressedResponse = compressor.Wrap(responseBytes);
+        
+        var responseEvent = new HorizonEvent
+        {
+            EventId = Guid.NewGuid(),
+            EventType = request.EventType + ":response",
+            Payload = compressedResponse.ToArray(),
+            CorrelationId = request.CorrelationId
+        };
+        
+        var json = JsonSerializer.Serialize(responseEvent);
+        await Database!.PublishAsync(RedisChannel.Literal(request.ReplyTo!), json);
     }
 }
 
