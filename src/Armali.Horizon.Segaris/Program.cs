@@ -138,6 +138,9 @@ public class Program
         app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
         app.UseAntiforgery();
 
+        // Endpoint de salud para smoke tests / readiness probes.
+        app.MapGet("/health", () => Results.Ok(new { status = "ok", app = "segaris" }));
+
         app.MapStaticAssets();
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode()

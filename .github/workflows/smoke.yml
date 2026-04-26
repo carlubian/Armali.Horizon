@@ -1,0 +1,124 @@
+﻿# ──────────────────────────────────────────────────────────────
+# Smoke – Compose & Integration
+#
+# Levanta el stack completo con docker-compose.local.yml y ejecuta
+# pruebas de integración contra Identity, Segaris, Autoconfig, MCP
+# y Redis. Valida que todo el sistema arranca y se comunica end-to-end.
+#
+# El proyecto Armali.Horizon.Smoke.Tests vive fuera de la solución
+# principal (Armali.Horizon.slnx) para que el CI rápido no lo lance
+# inadvertidamente: requiere un stack en marcha.
+#
+# Las páginas/operaciones que dependen de Azure Data Lake quedan fuera
+# del smoke porque CI no dispone de DATALAKE_ACCOUNT_KEY.
+# ──────────────────────────────────────────────────────────────
+name: Smoke – Compose & Integration
+
+on:
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_VERSION: "10.0.x"
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  COMPOSE_FILE: docker-compose.local.yml
+  IDENTITY_SEED_USER: armali
+  IDENTITY_SEED_PASSWORD: armali
+
+jobs:
+  smoke:
+    name: Stack smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup .NET ${{ env.DOTNET_VERSION }}
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      # ── 1. Compilar el proyecto smoke (no está en slnx) ────────
+      - name: Restore smoke project
+        run: dotnet restore test/Armali.Horizon.Smoke.Tests/Armali.Horizon.Smoke.Tests.csproj
+
+      - name: Build smoke project
+        run: |
+          dotnet build test/Armali.Horizon.Smoke.Tests/Armali.Horizon.Smoke.Tests.csproj \
+            --no-restore -c Release /p:SkipTailwindBuild=true
+
+      # ── 2. Levantar el stack Horizon completo ─────────────────
+      # --wait espera a que todos los servicios con healthcheck queden
+      # healthy. Como aún no añadimos healthchecks a los servicios .NET
+      # (sus imágenes no tienen curl/wget), hacemos polling explícito de
+      # /health en el siguiente paso.
+      - name: Build & start docker compose
+        run: docker compose -f $COMPOSE_FILE up -d --build
+
+      - name: Wait for /health endpoints
+        run: |
+          set -e
+          urls=(
+            "http://localhost:5149/health"
+            "http://localhost:5122/health"
+            "http://localhost:5004/health"
+            "http://localhost:5180/health"
+          )
+          for url in "${urls[@]}"; do
+            echo "⏳ Esperando $url"
+            ok=0
+            for i in $(seq 1 60); do
+              if curl -fsS "$url" > /dev/null 2>&1; then
+                echo "✅ $url respondió tras ${i} intento(s)"
+                ok=1
+                break
+              fi
+              sleep 2
+            done
+            if [ "$ok" -ne 1 ]; then
+              echo "::error::$url no respondió en 120s"
+              docker compose -f $COMPOSE_FILE ps
+              docker compose -f $COMPOSE_FILE logs --no-color --tail=200
+              exit 1
+            fi
+          done
+
+      # ── 3. Ejecutar smoke tests ───────────────────────────────
+      - name: Run smoke tests
+        env:
+          SMOKE_REDIS_ENDPOINT: localhost:6379
+          SMOKE_IDENTITY_HEALTH: http://localhost:5149/health
+          SMOKE_SEGARIS_HEALTH: http://localhost:5122/health
+          SMOKE_AUTOCONFIG_HEALTH: http://localhost:5004/health
+          SMOKE_MCP_HEALTH: http://localhost:5180/health
+        run: |
+          dotnet test test/Armali.Horizon.Smoke.Tests/Armali.Horizon.Smoke.Tests.csproj \
+            --no-build -c Release \
+            --logger "trx;LogFileName=smoke.trx" \
+            --results-directory ./TestResults
+
+      # ── 4. Diagnóstico: volcar logs siempre ───────────────────
+      - name: Dump container status
+        if: always()
+        run: |
+          docker compose -f $COMPOSE_FILE ps || true
+          mkdir -p ./TestResults
+          docker compose -f $COMPOSE_FILE logs --no-color > ./TestResults/docker-logs.txt || true
+
+      - name: Upload smoke artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-results
+          path: |
+            TestResults/**/*.trx
+            TestResults/docker-logs.txt
+
+      # ── 5. Tear down ──────────────────────────────────────────
+      - name: Tear down docker compose
+        if: always()
+        run: docker compose -f $COMPOSE_FILE down -v
+

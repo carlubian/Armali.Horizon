@@ -79,6 +79,10 @@ public class Program
         app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
         app.UseAntiforgery();
 
+        // Endpoint de salud para smoke tests / readiness probes. No toca la BD
+        // para no fallar durante el arranque o ante problemas transitorios.
+        app.MapGet("/health", () => Results.Ok(new { status = "ok", app = "identity" }));
+
         app.MapStaticAssets();
         app.MapRazorComponents<App>()
             .AddInteractiveServerRenderMode()
