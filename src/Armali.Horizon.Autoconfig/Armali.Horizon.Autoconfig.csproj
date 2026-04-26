@@ -17,6 +17,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Armali.Horizon.Blazor\Armali.Horizon.Blazor.csproj" />
+      <ProjectReference Include="..\Armali.Horizon.Contracts\Armali.Horizon.Contracts.csproj" />
       <ProjectReference Include="..\Armali.Horizon.IO\Armali.Horizon.IO.csproj" />
     </ItemGroup>
 

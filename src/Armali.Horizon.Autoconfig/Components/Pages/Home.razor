@@ -1,7 +1,8 @@
 ﻿@page "/"
+@using Armali.Horizon.Core.Model
 @inject NavigationManager Nav
 
-<HorizonAuthentication @bind-User="CurrentUser" />
+<HorizonAuthentication @bind-Identity="CurrentUser" />
 <HorizonLayout AppName="Autoconfig" PageName="@PageTitle">
     <Sidebar>
         
@@ -20,7 +21,7 @@
 
 @code
 {
-    private string CurrentUser { get; set; } = "Unknown";
+    private HorizonIdentity? CurrentUser { get; set; }
     private static readonly string Version = System.Reflection.Assembly
         .GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "0.0.0";
     
@@ -28,10 +29,10 @@
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(CurrentUser) || CurrentUser.Equals("Unknown"))
-                return $"v{Version}";
-            else
-                return $"v{Version} - {CurrentUser}";
+            var name = CurrentUser?.UserName;
+            return string.IsNullOrWhiteSpace(name)
+                ? $"v{Version}"
+                : $"v{Version} - {name}";
         }
     }
     

@@ -1,41 +1,74 @@
 ﻿@using Armali.Horizon.Blazor.Services
+@using Armali.Horizon.Contracts.Identity
 @using Armali.Horizon.Core.Model
+@using Armali.Horizon.IO
 @using static Microsoft.AspNetCore.Components.Web.RenderMode
 
 @inject NavigationManager Nav
 @inject HorizonSessionService Storage
+@inject HorizonEventService Events
 
 @rendermode InteractiveServer
 
 @code {
-    [Parameter]
-    public string User { get; set; } = "";
-    [Parameter]
-    public EventCallback<string> UserChanged { get; set; }
-    
+    /// <summary>UserId (string) — mantenido por compatibilidad con páginas existentes.</summary>
+    [Parameter] public string User { get; set; } = "";
+    [Parameter] public EventCallback<string> UserChanged { get; set; }
+
+    /// <summary>Identidad completa (incluye Roles y Token) tras la validación.</summary>
+    [Parameter] public HorizonIdentity? Identity { get; set; }
+    [Parameter] public EventCallback<HorizonIdentity?> IdentityChanged { get; set; }
+
     /// <summary>
     /// Evento que se dispara una vez que el usuario ha sido autenticado.
     /// Las páginas deben enlazar aquí la carga de datos que depende del usuario.
     /// </summary>
-    [Parameter]
-    public EventCallback OnAuthenticated { get; set; }
-    
+    [Parameter] public EventCallback OnAuthenticated { get; set; }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (!firstRender) return;
         if (!await IsAuthenticated())
         {
             Nav.NavigateTo("/horizon/login", false);
         }
     }
-    
+
     private async Task<bool> IsAuthenticated()
     {
-        var userCandidate = await Storage.GetItemAsync<HorizonIdentity>("Horizon:Session");
-
-        if (userCandidate is null || string.IsNullOrEmpty(userCandidate.UserId))
+        var cached = await Storage.GetItemAsync<HorizonIdentity>("Horizon:Session");
+        if (cached is null || string.IsNullOrEmpty(cached.Token))
             return false;
 
-        await UserChanged.InvokeAsync(userCandidate.UserId);
+        // Revalidamos el token contra Identity (refresca roles y rechaza tokens expirados/revocados)
+        HorizonIdentity? validated;
+        try
+        {
+            var client = new HorizonAuthClient(Events, cached.Token);
+            validated = await client.WhoAmIAsync();
+        }
+        catch
+        {
+            // Si el bus IO falla, usamos la cache local para no bloquear la app por la red
+            validated = cached;
+        }
+
+        if (validated is null)
+        {
+            await Storage.RemoveItemAsync("Horizon:Session");
+            return false;
+        }
+
+        // Aseguramos que el token siga presente (WhoAmI lo conserva, pero por si acaso)
+        if (string.IsNullOrEmpty(validated.Token))
+            validated.Token = cached.Token;
+
+        // Refrescamos cache si los roles han cambiado
+        if (!validated.Roles.SequenceEqual(cached.Roles))
+            await Storage.SetItemAsync("Horizon:Session", validated);
+
+        await UserChanged.InvokeAsync(validated.UserId);
+        await IdentityChanged.InvokeAsync(validated);
         await OnAuthenticated.InvokeAsync();
         return true;
     }

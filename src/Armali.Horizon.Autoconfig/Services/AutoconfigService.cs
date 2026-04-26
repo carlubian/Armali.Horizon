@@ -314,6 +314,98 @@ public class AutoconfigService
         using var Reader = new StreamReader(FileStream, Encoding.UTF8);
         return await Reader.ReadToEndAsync();
     }
+
+    /// <summary>
+    /// Resuelve la mejor versión compatible que contenga el archivo solicitado, sin tocar el Datalake.
+    /// Devuelve el <see cref="VersionContext"/> de la versión elegida o null si no hay candidato válido.
+    /// <para>
+    /// Reglas de prioridad (sólo dentro del mismo Major):
+    /// </para>
+    /// <list type="number">
+    ///   <item>Coincidencia exacta de Major.Minor.Patch.</item>
+    ///   <item>Mismo Major.Minor con el Patch más alto.</item>
+    ///   <item>Mismo Major con el Minor.Patch más altos.</item>
+    /// </list>
+    /// Si una versión candidata no contiene el archivo, se descarta y se prueba la siguiente.
+    /// </summary>
+    /// <returns>
+    /// (ctx, fileId) de la versión que contiene el archivo, o null si no hay match
+    /// (incluye los casos de Nodo o App no encontrados — el llamante debe validar antes si quiere distinguirlos).
+    /// </returns>
+    public async Task<(VersionContext Context, int FileId)?> ResolveBestVersionFileAsync(
+        string nodeName, string appName, int major, int minor, int patch, string fileName)
+    {
+        await using var context = Factory.CreateDbContext();
+
+        var Node = await context.Nodes.AsNoTracking()
+            .FirstOrDefaultAsync(n => n.Name == nodeName);
+        if (Node is null) return null;
+
+        var App = await context.Apps.AsNoTracking()
+            .FirstOrDefaultAsync(a => a.NodeId == Node.Id && a.Name == appName);
+        if (App is null) return null;
+
+        // Cargamos sólo las versiones compatibles (mismo Major) y sus archivos en una sola pasada.
+        // Es razonable porque el número de versiones por App es pequeño en este dominio.
+        var Versions = await context.Versions.AsNoTracking()
+            .Where(v => v.AppId == App.Id && v.Major == major)
+            .ToListAsync();
+        if (Versions.Count == 0) return null;
+
+        var VersionIds = Versions.Select(v => v.Id).ToList();
+        var FilesByVersion = await context.Files.AsNoTracking()
+            .Where(f => VersionIds.Contains(f.VersionId) && f.Name == fileName)
+            .ToDictionaryAsync(f => f.VersionId, f => f.Id);
+
+        // Ordenamos los candidatos según la prioridad del fallback:
+        //   1) Coincidencia exacta (Major.Minor.Patch == solicitado)
+        //   2) Mismo Minor, Patch desc
+        //   3) Resto del Major, Minor desc, Patch desc
+        // Dentro de cada bloque la primera versión con el archivo gana.
+        var Ordered = Versions
+            .OrderByDescending(v => v.Major == major && v.Minor == minor && v.Patch == patch)
+            .ThenByDescending(v => v.Minor == minor)
+            .ThenByDescending(v => v.Minor)
+            .ThenByDescending(v => v.Patch);
+
+        foreach (var v in Ordered)
+        {
+            if (!FilesByVersion.TryGetValue(v.Id, out var fileId)) continue;
+            var ctx = new VersionContext
+            {
+                NodeName = Node.Name,
+                AppName = App.Name,
+                VersionName = v.Name,
+            };
+            return (ctx, fileId);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Indica si existe el Nodo con el nombre indicado.
+    /// </summary>
+    public async Task<bool> NodeExists(string nodeName)
+    {
+        await using var context = Factory.CreateDbContext();
+        return await context.Nodes.AsNoTracking().AnyAsync(n => n.Name == nodeName);
+    }
+
+    /// <summary>
+    /// Indica si existe la App con el nombre indicado dentro del Nodo dado.
+    /// </summary>
+    public async Task<bool> AppExists(string nodeName, string appName)
+    {
+        await using var context = Factory.CreateDbContext();
+        var nodeId = await context.Nodes.AsNoTracking()
+            .Where(n => n.Name == nodeName)
+            .Select(n => (int?)n.Id)
+            .FirstOrDefaultAsync();
+        if (nodeId is null) return false;
+        return await context.Apps.AsNoTracking()
+            .AnyAsync(a => a.NodeId == nodeId.Value && a.Name == appName);
+    }
     
     /// <summary>
     /// Sobrescribe el contenido de un fichero en el Datalake y actualiza KbSize en BD.

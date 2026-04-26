@@ -41,7 +41,7 @@
                 <BaseGlobalButton Icon="fa-gear" OnClick="() => { }"/>
                 @if (_isAuthenticated)
                 {
-                    <BaseGlobalButton Icon="fa-user-pen" OnClick="() => { }"/>
+                    <BaseGlobalButton Icon="fa-user-pen" OnClick="@NavigateProfile"/>
                     <BaseGlobalButton Icon="fa-arrow-right-to-bracket" OnClick="@NavigateLogout"/>
                 }
                 else
@@ -128,6 +128,12 @@
     private void NavigateLogout()
     {
         Nav.NavigateTo("/horizon/logout");
+    }
+    
+    private void NavigateProfile()
+    {
+        // El perfil sólo está disponible en la app Identity; el resto redirigen ahí en la URL absoluta si lo configura el operador
+        Nav.NavigateTo("/profile");
     }
 
     private async Task<bool> IsAuthenticated()

@@ -2,8 +2,11 @@
   <Folder Name="/src/">
     <Project Path="src/Armali.Horizon.Autoconfig/Armali.Horizon.Autoconfig.csproj" />
     <Project Path="src/Armali.Horizon.Blazor/Armali.Horizon.Blazor.csproj" />
+    <Project Path="src/Armali.Horizon.Contracts/Armali.Horizon.Contracts.csproj" />
     <Project Path="src/Armali.Horizon.Core/Armali.Horizon.Core.csproj" />
+    <Project Path="src/Armali.Horizon.Identity/Armali.Horizon.Identity.csproj" />
     <Project Path="src/Armali.Horizon.IO/Armali.Horizon.IO.csproj" />
+    <Project Path="src/Armali.Horizon.MCP/Armali.Horizon.MCP.csproj" />
     <Project Path="src/Armali.Horizon.Segaris/Armali.Horizon.Segaris.csproj" />
   </Folder>
   <Folder Name="/test/">

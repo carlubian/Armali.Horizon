@@ -1,23 +1,25 @@
 ﻿@page "/horizon/login"
 
 @using Armali.Horizon.Blazor.Services
+@using Armali.Horizon.Contracts.Identity
 @using Armali.Horizon.Core.Model
+@using Armali.Horizon.IO
 @using static Microsoft.AspNetCore.Components.Web.RenderMode
 
 @rendermode InteractiveServer
 
 <HorizonLayout AppName="Horizon Identity" PageName="Login">
     <Sidebar>
-        
+
     </Sidebar>
     <SidebarBottom>
-        
+
     </SidebarBottom>
     <Body>
-    
+
         <div class="fixed inset-0 z-50 flex items-center justify-center p-12">
             <div class="max-h-full max-w-full">
-                
+
                 <div class="overflow-hidden grid grid-cols-1">
 
                     <!-- Main content -->
@@ -25,8 +27,12 @@
                         <HorizonLabelTitle Text="Login to Horizon"/>
                         <HorizonInputText Placeholder="Username" @bind-Text="@Username"/>
                         <HorizonInputText Placeholder="Password" @bind-Text="@Password"/>
+                        @if (!string.IsNullOrEmpty(Error))
+                        {
+                            <div class="text-hz-tribunal mt-2 text-sm">@Error</div>
+                        }
                     </div>
-    
+
                     <!-- Button bar -->
                     <div class="h-12 p-4 pb-8 flex flex-row items-center justify-center gap-4">
                         <HorizonInlineButton Color="hz-apollo" Icon="fa-right-to-bracket" Caption="Login" OnClick="@Login"/>
@@ -41,38 +47,34 @@
 
 @code {
     [Inject] private HorizonSessionService Storage { get; set; } = default!;
+    [Inject] private HorizonEventService Events { get; set; } = default!;
     [Inject] private NavigationManager Nav { get; set; } = default!;
-    
+
     private string Username { get; set; } = string.Empty;
     private string Password { get; set; } = string.Empty;
-
-    protected override Task OnInitializedAsync()
-    {
-        Console.WriteLine("Initialized login page");
-        return Task.CompletedTask;
-    }
-
-    protected override Task OnAfterRenderAsync(bool firstRender)
-    {
-        Console.WriteLine("After render login page");
-        return Task.CompletedTask;
-    }
+    private string Error { get; set; } = string.Empty;
 
     private async Task Login()
     {
-        // This is a temporary solution
-        // until Horizon.Identity does something more real
-
-        if (Username.Equals("carlos"))
+        Error = string.Empty;
+        try
         {
-            var session = new HorizonIdentity()
+            var client = new HorizonAuthClient(Events);
+            var response = await client.LoginAsync(Username, Password);
+
+            if (!response.Success || response.Identity is null)
             {
-                UserId = "carlos",
-                UserName = "Carlos",
-            };
-            
-            await Storage.SetItemAsync("Horizon:Session", session);
+                Error = response.Error?.Message ?? "Login fallido.";
+                return;
+            }
+
+            // Persistimos identidad+token en localStorage para reutilizarla entre páginas
+            await Storage.SetItemAsync("Horizon:Session", response.Identity);
             Nav.NavigateTo("/");
+        }
+        catch (Exception ex)
+        {
+            Error = $"Error de conexión: {ex.Message}";
         }
     }
 }

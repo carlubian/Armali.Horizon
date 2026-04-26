@@ -1,0 +1,139 @@
+﻿@using System.Linq
+@using Armali.Horizon.Blazor.Layout
+@using Armali.Horizon.Contracts.Identity
+
+@*
+    Popup de edición de roles de un usuario. Muestra los roles actuales como chips
+    eliminables y permite añadir nuevos escribiendo un nombre libre. Si el usuario
+    en edición es el propio admin que está conectado, el rol "admin" queda fijo y
+    no se puede eliminar (defensa frontal; el backend lo bloquea también).
+*@
+
+<HorizonPopup @bind-Visible="Visible">
+    <HorizonDialog Title="@($"Roles · {User?.UserName}")">
+        <Content>
+            <div class="w-96 max-w-full flex flex-col gap-4">
+                
+                <!-- Roles actuales -->
+                <div class="flex flex-wrap gap-2 min-h-10">
+                    @if (_current.Count == 0)
+                    {
+                        <span class="text-hz-artemisia italic">No roles assigned</span>
+                    }
+                    else
+                    {
+                        @foreach (var role in _current.OrderBy(r => r))
+                        {
+                            var isLocked = IsAdminLock(role);
+                            <span class=@($"flex items-center gap-2 px-3 py-1 rounded-xl text-hz-arendelle text-sm {(isLocked ? "bg-hz-meridian" : "bg-hz-spartan")}")>
+                                @role
+                                @if (!isLocked)
+                                {
+                                    <button type="button" class="cursor-pointer text-hz-tribunal hover:opacity-80"
+                                            @onclick="@(() => Remove(role))">
+                                        <i class="fa-solid fa-xmark"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <i class="fa-solid fa-lock text-hz-arendelle text-xs" title="No puedes quitarte admin a ti mismo"></i>
+                                }
+                            </span>
+                        }
+                    }
+                </div>
+                
+                <!-- Añadir rol -->
+                <div class="flex gap-2">
+                    <input type="text" list="hz-roles-suggestions"
+                           class="flex-1 rounded-xl bg-hz-styx text-hz-arendelle placeholder:text-hz-gray font-hz-text shadow-xl h-10 px-2"
+                           placeholder="Add role…"
+                           @bind="_newRole" @bind:event="oninput" />
+                    <datalist id="hz-roles-suggestions">
+                        @foreach (var s in Suggestions.Where(s => !_current.Contains(s, StringComparer.OrdinalIgnoreCase)))
+                        {
+                            <option value="@s"></option>
+                        }
+                    </datalist>
+                    <HorizonMiniButton Color="hz-opera" Icon="fa-plus" OnClick="Add" />
+                </div>
+                
+                @if (!string.IsNullOrEmpty(_error))
+                {
+                    <div class="text-hz-tribunal text-sm">@_error</div>
+                }
+            </div>
+        </Content>
+        <Controls>
+            <HorizonInlineButton Color="hz-tribunal" Icon="fa-xmark" Caption="Cancel" OnClick="Cancel" />
+            <HorizonInlineButton Color="hz-apollo" Icon="fa-floppy-disk" Caption="Save" OnClick="Save" />
+        </Controls>
+    </HorizonDialog>
+</HorizonPopup>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
+    
+    /// <summary>Usuario en edición.</summary>
+    [Parameter] public IdentityUserDto? User { get; set; }
+    
+    /// <summary>UserId del que tiene la sesión actual: si coincide con <see cref="User"/>, no podrá quitarse admin.</summary>
+    [Parameter] public string CurrentUserId { get; set; } = string.Empty;
+    
+    /// <summary>Catálogo de roles existentes para sugerir en el datalist.</summary>
+    [Parameter] public IReadOnlyList<string> Suggestions { get; set; } = [];
+    
+    /// <summary>Callback con la nueva lista de roles cuando el usuario pulsa "Save".</summary>
+    [Parameter] public EventCallback<string[]> OnSave { get; set; }
+    
+    private List<string> _current = [];
+    private string _newRole = string.Empty;
+    private string _error = string.Empty;
+    
+    protected override void OnParametersSet()
+    {
+        _current = User?.Roles?.ToList() ?? [];
+        _newRole = string.Empty;
+        _error = string.Empty;
+    }
+    
+    private bool IsAdminLock(string role) =>
+        string.Equals(role, IdentityChannels.AdminRole, StringComparison.OrdinalIgnoreCase) &&
+        User?.UserId == CurrentUserId;
+    
+    private void Add()
+    {
+        var clean = _newRole?.Trim() ?? string.Empty;
+        if (clean.Length == 0) return;
+        if (_current.Any(r => string.Equals(r, clean, StringComparison.OrdinalIgnoreCase)))
+        {
+            _error = "El rol ya está asignado.";
+            return;
+        }
+        _current.Add(clean);
+        _newRole = string.Empty;
+        _error = string.Empty;
+    }
+    
+    private void Remove(string role)
+    {
+        if (IsAdminLock(role)) return;
+        _current.Remove(role);
+    }
+    
+    private async Task Save()
+    {
+        await OnSave.InvokeAsync(_current.ToArray());
+        await Hide();
+    }
+    
+    private Task Cancel() => Hide();
+    
+    private async Task Hide()
+    {
+        Visible = false;
+        await VisibleChanged.InvokeAsync(Visible);
+    }
+}
+

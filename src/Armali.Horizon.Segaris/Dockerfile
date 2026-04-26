@@ -17,6 +17,8 @@ WORKDIR /build
 COPY ["src/Armali.Horizon.Segaris/Armali.Horizon.Segaris.csproj", "src/Armali.Horizon.Segaris/"]
 COPY ["src/Armali.Horizon.Blazor/Armali.Horizon.Blazor.csproj", "src/Armali.Horizon.Blazor/"]
 COPY ["src/Armali.Horizon.Core/Armali.Horizon.Core.csproj", "src/Armali.Horizon.Core/"]
+COPY ["src/Armali.Horizon.IO/Armali.Horizon.IO.csproj", "src/Armali.Horizon.IO/"]
+COPY ["src/Armali.Horizon.Contracts/Armali.Horizon.Contracts.csproj", "src/Armali.Horizon.Contracts/"]
 RUN dotnet restore "src/Armali.Horizon.Segaris/Armali.Horizon.Segaris.csproj"
 
 COPY . .
