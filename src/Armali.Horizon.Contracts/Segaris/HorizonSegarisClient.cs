@@ -201,6 +201,20 @@ public class HorizonSegarisClient
     public Task<ListClothesColorAssignmentsResponse> ListClothesColorAssignmentsAsync(int garmentId) =>
         Send<ListClothesColorAssignmentsResponse>(new ListClothesColorAssignmentsRequest { GarmentId = garmentId });
     
+    // ── Firebird (People) ─────────────────────────────────────────────
+    
+    public Task<ListFirebirdCategoriesResponse> ListFirebirdCategoriesAsync() =>
+        Send<ListFirebirdCategoriesResponse>(new ListFirebirdCategoriesRequest());
+    
+    public Task<ListFirebirdStatusesResponse> ListFirebirdStatusesAsync() =>
+        Send<ListFirebirdStatusesResponse>(new ListFirebirdStatusesRequest());
+    
+    public Task<ListFirebirdsResponse> ListFirebirdsAsync() =>
+        Send<ListFirebirdsResponse>(new ListFirebirdsRequest());
+    
+    public Task<ListFirebirdSubEntitiesResponse> ListFirebirdSubEntitiesAsync(int firebirdId) =>
+        Send<ListFirebirdSubEntitiesResponse>(new ListFirebirdSubEntitiesRequest { FirebirdId = firebirdId });
+    
     // ── Admin (Processes) ──────────────────────────────────────────────
     
     public Task<ListAdminCategoriesResponse> ListAdminCategoriesAsync() =>

@@ -164,6 +164,20 @@ internal static class SegarisDtoMapper
         Id = a.Id, GarmentId = a.GarmentId, ColorId = a.ColorId, StyleId = a.StyleId,
     };
     
+    // ── Firebird (People) ──────────────────────────────────────────────────
+    public static SegarisRefDto ToDto(this FirebirdCategory c) => new() { Id = c.Id, Name = c.Name };
+    public static SegarisStatusDto ToDto(this FirebirdStatus s) => new() { Id = s.Id, Name = s.Name, Color = s.Color };
+    public static FirebirdEntityDto ToDto(this FirebirdEntity e) => new()
+    {
+        Id = e.Id, Name = e.Name, CategoryId = e.CategoryId, StatusId = e.StatusId,
+        Location = e.Location, Birthday = e.Birthday, IsAware = e.IsAware,
+        IsPrivate = e.IsPrivate, Creator = e.Creator,
+    };
+    public static FirebirdSubEntityDto ToDto(this FirebirdSubEntity e) => new()
+    {
+        Id = e.Id, Date = e.Date, Description = e.Description, FirebirdId = e.FirebirdId,
+    };
+    
     // ── Admin (Processes) ──────────────────────────────────────────────────
     public static SegarisRefDto ToDto(this AdminCategory c) => new() { Id = c.Id, Name = c.Name };
     public static AdminEntityDto ToDto(this AdminEntity e) => new()

@@ -629,6 +629,58 @@ public class ListClothesColorAssignmentsResponse : IHorizonEventPayload, ISegari
     public List<ClothesColorAssignmentDto> Assignments { get; set; } = [];
 }
 
+// ── Firebird (People) ───────────────────────────────────────────────────────
+
+public class ListFirebirdCategoriesRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.firebird.categories.list";
+}
+public class ListFirebirdCategoriesResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.firebird.categories.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<SegarisRefDto> Categories { get; set; } = [];
+}
+
+public class ListFirebirdStatusesRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.firebird.statuses.list";
+}
+public class ListFirebirdStatusesResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.firebird.statuses.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<SegarisStatusDto> Statuses { get; set; } = [];
+}
+
+public class ListFirebirdsRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.firebird.list";
+}
+public class ListFirebirdsResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.firebird.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<FirebirdEntityDto> Items { get; set; } = [];
+}
+
+public class ListFirebirdSubEntitiesRequest : AuthenticatedRequest
+{
+    public override string EventType => "segaris.firebird.subEntities.list";
+    /// <summary>ID de la persona cuyos eventos se quieren consultar.</summary>
+    public int FirebirdId { get; set; }
+}
+public class ListFirebirdSubEntitiesResponse : IHorizonEventPayload, ISegarisResponse
+{
+    public string EventType => "segaris.firebird.subEntities.list:response";
+    public bool Success { get; set; }
+    public SegarisErrorInfo? Error { get; set; }
+    public List<FirebirdSubEntityDto> SubEntities { get; set; } = [];
+}
+
 // ── Admin (Processes) ───────────────────────────────────────────────────────
 
 public class ListAdminCategoriesRequest : AuthenticatedRequest

@@ -611,6 +611,56 @@ public class ListClothesColorAssignmentsHandler(HorizonAuthClient identity, Clot
     }
 }
 
+// ── Firebird (People) ───────────────────────────────────────────────────────
+
+public class ListFirebirdCategoriesHandler(HorizonAuthClient identity, FirebirdService svc)
+    : IHorizonRequestHandler<ListFirebirdCategoriesRequest, ListFirebirdCategoriesResponse>
+{
+    public async Task<ListFirebirdCategoriesResponse> HandleAsync(ListFirebirdCategoriesRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListFirebirdCategoriesResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetFirebirdCategories();
+        return new ListFirebirdCategoriesResponse { Success = true, Categories = data.ConvertAll(c => c.ToDto()) };
+    }
+}
+
+public class ListFirebirdStatusesHandler(HorizonAuthClient identity, FirebirdService svc)
+    : IHorizonRequestHandler<ListFirebirdStatusesRequest, ListFirebirdStatusesResponse>
+{
+    public async Task<ListFirebirdStatusesResponse> HandleAsync(ListFirebirdStatusesRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListFirebirdStatusesResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetFirebirdStatuses();
+        return new ListFirebirdStatusesResponse { Success = true, Statuses = data.ConvertAll(s => s.ToDto()) };
+    }
+}
+
+public class ListFirebirdsHandler(HorizonAuthClient identity, FirebirdService svc)
+    : IHorizonRequestHandler<ListFirebirdsRequest, ListFirebirdsResponse>
+{
+    public async Task<ListFirebirdsResponse> HandleAsync(ListFirebirdsRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListFirebirdsResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetFirebirdEntities(id.UserId);
+        return new ListFirebirdsResponse { Success = true, Items = data.ConvertAll(e => e.ToDto()) };
+    }
+}
+
+public class ListFirebirdSubEntitiesHandler(HorizonAuthClient identity, FirebirdService svc)
+    : IHorizonRequestHandler<ListFirebirdSubEntitiesRequest, ListFirebirdSubEntitiesResponse>
+{
+    public async Task<ListFirebirdSubEntitiesResponse> HandleAsync(ListFirebirdSubEntitiesRequest req, CancellationToken ct = default)
+    {
+        var id = await identity.AuthAsync(req);
+        if (id is null) return new ListFirebirdSubEntitiesResponse { Success = false, Error = HandlerAuth.Unauthorized() };
+        var data = await svc.GetFirebirdSubEntities(new() { Id = req.FirebirdId });
+        return new ListFirebirdSubEntitiesResponse { Success = true, SubEntities = data.ConvertAll(e => e.ToDto()) };
+    }
+}
+
 // ── Admin (Processes) ───────────────────────────────────────────────────────
 
 public class ListAdminCategoriesHandler(HorizonAuthClient identity, AdminService svc)

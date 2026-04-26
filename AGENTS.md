@@ -254,6 +254,7 @@ Operaciones disponibles (todas en el canal `segaris`):
 - `segaris.maint.categories.list`, `statuses.list`, `list`
 - `segaris.inv.vendorStatuses.list`, `vendors.list`, `vendorStats.get`, `itemCategories.list`, `itemStatuses.list`, `items.list`, `shoppingList.get`, `itemPriceHistory.get`, `orderStatuses.list`, `orders.list`, `orderLines.list`, `orderStats.get`
 - `segaris.clothes.categories.list`, `statuses.list`, `washTypes.list`, `colors.list`, `colorStyles.list`, `list`, `colorAssignments.list`
+- `segaris.firebird.categories.list`, `statuses.list`, `list`, `subEntities.list`
 - `segaris.admin.categories.list`, `list`, `steps.list`, `stats.get`
 
 Cliente recomendado: `HorizonSegarisClient` en `Armali.Horizon.Contracts.Segaris`. No reimplementes los requests en cada app.
