@@ -1,7 +1,6 @@
 ﻿@page "/archive"
 
 @using Armali.Horizon.Segaris.Services
-@using Microsoft.AspNetCore.Components.Forms
 
 @inject ArchiveService ArchiveService
 @inject IJSRuntime JS
@@ -29,7 +28,7 @@
         </Header>
         <RowTemplate>
             <HorizonCellText Content="@context.Name" Center="false" 
-                             IsPrivate="@context.IsPrivate" Creator="@context.Creator" CurrentUser="@CurrentUser" />
+                             Icon="@PrivacyIcon(context.IsPrivate, context.Creator, CurrentUser)" IconColor="@PrivacyColor(context.IsPrivate, context.Creator, CurrentUser)" />
             <HorizonCellDateTime Content="@context.Date" />
             <HorizonCellText Content="@context.File" />
             <HorizonCellText Content="@Index(Categories, context.CategoryId)?.Name" />
@@ -173,7 +172,7 @@
     
     private async Task DoCreate()
     {
-        // Handle file upload if a file was selected
+        // Subir fichero si se ha seleccionado uno
         if (SelectedFile != null)
         {
             await using var Stream = SelectedFile.OpenReadStream(SelectedFile.Size);
