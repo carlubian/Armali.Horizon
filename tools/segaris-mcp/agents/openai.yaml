@@ -1,0 +1,15 @@
+interface:
+  display_name: "Segaris MCP"
+  short_description: "Query local Segaris MCP tools"
+  default_prompt: "Use $segaris-mcp to verify my Horizon identity and list available Segaris tools."
+
+dependencies:
+  tools:
+    - type: "mcp"
+      value: "segaris"
+      description: "Local Horizon/Segaris MCP server"
+      transport: "streamable_http"
+      url: "http://node1.armali.com:5180/mcp"
+
+policy:
+  allow_implicit_invocation: true
