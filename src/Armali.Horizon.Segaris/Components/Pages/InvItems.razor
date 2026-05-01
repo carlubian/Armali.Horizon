@@ -147,14 +147,12 @@
                     <HorizonTable Items="@HistoryEntries">
                         <Header>
                             <HorizonCellHeader TItem="InvItemPriceHistory" Name="Date" />
-                            <HorizonCellHeader TItem="InvItemPriceHistory" Name="Vendor" />
                             <HorizonCellHeader TItem="InvItemPriceHistory" Name="Qty" />
                             <HorizonCellHeader TItem="InvItemPriceHistory" Name="Unit Price" />
                             <HorizonCellHeader TItem="InvItemPriceHistory" Name="Total" />
                         </Header>
                         <RowTemplate Context="entry">
                             <HorizonCellDateTime Content="@entry.PurchaseDate" />
-                            <HorizonCellText Content="@(Index(Vendors, entry.VendorId)?.Name ?? "Private vendor")" />
                             <HorizonCellText Content="@entry.ItemCount" />
                             <HorizonCellCurrency Content="@entry.UnitPrice" />
                             <HorizonCellCurrency Content="@entry.TotalAmount" />
