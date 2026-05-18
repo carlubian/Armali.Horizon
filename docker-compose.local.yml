@@ -133,10 +133,45 @@ services:
       - segaris
     restart: unless-stopped
 
+  # ─── Althes ────────────────────────────────────────────────────────────────────
+  # Oficina virtual de agentes autónomos. Cada contenedor es un "proyecto" con
+  # su propio set de agentes definidos en Autoconfig (archivo {ProjectId}.agents.json).
+  # Variables clave:
+  #   - ALTHES_PROJECT_ID  → id del proyecto (canales, archivo de config).
+  #   - ALTHES_API_KEY     → API key Identity (rol althes.user) usada por la instancia.
+  #   - OPENAI_API_KEY     → API key del LLM.
+  althes:
+    build:
+      context: .
+      dockerfile: src/Armali.Horizon.Althes/Dockerfile
+    container_name: horizon-althes
+    ports:
+      - "5200:5200"
+    volumes:
+      - althes-data:/persistence
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Horizon__ConnectionStrings__Althes=Data Source=/persistence/althes.db
+      - Horizon__Events__Endpoint=horizon-redis:6379
+      - Horizon__Events__DefaultTimeoutSeconds=30
+      - Horizon__Logging__Endpoint=${HORIZON_SEQ_ENDPOINT:-http://host.docker.internal:5341}
+      - Horizon__Logging__ApiKey=${HORIZON_SEQ_APIKEY:-}
+      - Horizon__Logging__MinimumLevel=Information
+      - Horizon__Althes__ProjectId=${ALTHES_PROJECT_ID:-default}
+      - Horizon__Althes__Llm__Model=${ALTHES_LLM_MODEL:-gpt-4o-mini}
+      - HORIZON_NODE_NAME=${HORIZON_NODE_NAME:-}
+      - ALTHES_API_KEY=${ALTHES_API_KEY:-}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+    depends_on:
+      - redis
+      - identity
+      - autoconfig
+    restart: unless-stopped
+
 # ─── Volúmenes con nombre (aislados de producción) ────────────────────────────
 volumes:
   redis-data:
   identity-data:
   segaris-data:
   autoconfig-data:
-
+  althes-data:

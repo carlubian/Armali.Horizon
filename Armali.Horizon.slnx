@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/Armali.Horizon.Althes/Armali.Horizon.Althes.csproj" />
     <Project Path="src/Armali.Horizon.Autoconfig/Armali.Horizon.Autoconfig.csproj" />
     <Project Path="src/Armali.Horizon.Blazor/Armali.Horizon.Blazor.csproj" />
     <Project Path="src/Armali.Horizon.Contracts/Armali.Horizon.Contracts.csproj" />
@@ -14,5 +15,6 @@
     <Project Path="test/Armali.Horizon.IO.Tests/Armali.Horizon.IO.Tests.csproj" />
     <Project Path="test/Armali.Horizon.Segaris.Tests/Armali.Horizon.Segaris.Tests.csproj" />
     <Project Path="test/Armali.Horizon.Autoconfig.Tests/Armali.Horizon.Autoconfig.Tests.csproj" />
+    <Project Path="test/Armali.Horizon.Althes.Tests/Armali.Horizon.Althes.Tests.csproj" />
   </Folder>
 </Solution>

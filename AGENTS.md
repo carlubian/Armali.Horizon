@@ -84,7 +84,7 @@ Puertos actuales:
 | MCP | 5180 |
 | Redis | 6379 |
 
-Variables relevantes: `HORIZON_SEQ_ENDPOINT`, `HORIZON_SEQ_APIKEY`, `DATALAKE_ACCOUNT_KEY`, `IDENTITY_SEED_USER`, `IDENTITY_SEED_PASSWORD`.
+Variables relevantes: `HORIZON_SEQ_ENDPOINT`, `HORIZON_SEQ_APIKEY`, `HORIZON_NODE_NAME`, `DATALAKE_ACCOUNT_KEY`, `IDENTITY_SEED_USER`, `IDENTITY_SEED_PASSWORD`, `ALTHES_PROJECT_ID`, `ALTHES_API_KEY`, `OPENAI_API_KEY`.
 
 Los Dockerfile descargan Tailwind standalone para Linux, compilan `Armali.Horizon.Blazor/wwwroot/app.css` y el CSS de la app, y luego ejecutan `dotnet build/publish` con `SkipTailwindBuild=true`.
 
@@ -317,7 +317,97 @@ Autoconfig también expone una operación request/response sobre IO en el canal 
 - El contenido se devuelve como `string` UTF-8. Si los bytes no son UTF-8 válidos se responde `not_text`. El tamaño máximo se controla con `Horizon:Autoconfig:MaxFileBytes` (env `Horizon__Autoconfig__MaxFileBytes`, por defecto 2 MB) y se devuelve `too_large` si se supera.
 - Cliente recomendado: `HorizonAutoconfigClient` en `Armali.Horizon.Contracts.Autoconfig`. No reimplementes el request en cada app.
 
-## Identity
+## Althes
+
+`Armali.Horizon.Althes` es una **oficina virtual de agentes autónomos**. Cada contenedor representa un *proyecto* (`ProjectId`) con su propio set de agentes definidos en un archivo JSON servido por Autoconfig. Los agentes viven dentro del mismo proceso pero se comunican entre sí (y con el usuario) exclusivamente a través del bus IO. No tiene UI en v1; sólo backend.
+
+Piezas:
+
+- App: `src/Armali.Horizon.Althes` (ASP.NET, sin Blazor). Persistencia SQLite (`AlthesDbContext`).
+- Contratos: `src/Armali.Horizon.Contracts/Althes/` con `AlthesChannels`, payloads, DTOs y `HorizonAlthesClient`.
+- Runtime por agente: `Services/AgentRuntime.cs` (un loop por agente, cola FIFO `Channel<T>`). Orquestado por `AgentRuntimeHost`.
+- Skills modulares: `Services/Skills/` (think, notify_user, ask_user, notify_agent, ask_agent). Se añaden implementando `IAgentSkill` y registrando en DI.
+- LLM: `Services/Llm/ILlmClient.cs` + `OpenAiLlmClient` (HTTP directo contra cualquier endpoint compatible con OpenAI Chat Completions).
+
+### Canales y autenticación
+
+- Canal externo request/response: `althes:{projectId}` (`AlthesChannels.For(projectId)`).
+- Canal interno por agente (fire-and-forget, lo alimenta el bus IO y los handlers externos): `althes:{projectId}:agent:{name}`.
+- Canal de inbox del usuario (para UIs futuras en vivo): `althes:{projectId}:user`.
+- Las operaciones externas requieren rol Identity `althes.user` (`AlthesChannels.UserRole`). Los admins lo cumplen implícitamente. El rol **no se crea por seed**: añádelo manualmente a los usuarios necesarios.
+- La instancia lee su propia API key Identity de la variable `ALTHES_API_KEY` (nombre configurable en `Horizon:Althes:ApiKeyEnv`).
+
+### Configuración de agentes (Autoconfig)
+
+Cada instancia pide a Autoconfig el archivo `{ProjectId}.agents.json` desde el nodo/app/versión configurados en `Horizon:Althes:Config`. Esquema:
+
+```json
+{
+  "agents": [
+    {
+      "name": "planner",
+      "systemPrompt": "Eres un planificador...",
+      "model": "gpt-4o-mini",
+      "carryOverSummary": true,
+      "allowedSkills": ["think", "ask_user", "notify_agent"],
+      "allowedRecipients": ["worker", "reviewer"],
+      "maxActionsPerHour": 60
+    }
+  ]
+}
+```
+
+`allowedSkills` y `allowedRecipients` vacíos o ausentes = sin restricción. Si Autoconfig no responde, Althes intenta rehidratar desde la copia local que persiste en su SQLite.
+
+### Runs, contexto y cierre
+
+- Cada agente tiene 0..1 `AgentRun` activo. Un run = contexto coherente desde el system prompt hasta el cierre.
+- "Nueva conversación" = cerrar el run actual (genera `Summary` siempre) y abrir uno nuevo. Disparadores: `StartNewRunRequest` externo, `SendMessageRequest` con `StartNewRun=true`, o cierre forzado por el `ContextManager` al cruzar el hard-limit.
+- Si el agente tiene `carryOverSummary=true`, el siguiente run arranca con el resumen del anterior inyectado como segundo mensaje system.
+- `ContextManager` vigila `TokenCount` del run frente a `Horizon:Althes:Llm:ContextWindow`:
+  - Soft-limit (`SoftLimitFraction`, default 0.7): pide al LLM un resumen de los mensajes antiguos y los sustituye por un único system. Run pasa a `Compacted`.
+  - Hard-limit (`HardLimitFraction`, default 0.9) tras compactar: cierra el run con `Completed` y abre uno nuevo. Si la compresión falla, cierra con `Aborted`.
+
+### Skills v1 (modulares)
+
+| Name | Tipo | Efecto |
+|---|---|---|
+| `think` | continúa | Razonamiento interno; el texto se añade al contexto sin efectos externos. |
+| `notify_user` | continúa | Publica un evento informativo en el inbox del usuario. |
+| `ask_user` | await | Persiste un `UserQuery`, publica la pregunta y suspende el burst. Se reanuda cuando `AnswerUserQueryRequest` inyecta `UserAnswer` en el inbox del agente. |
+| `notify_agent` | continúa | Publica fire-and-forget en el canal interno del agente destino. Respeta `allowedRecipients`. |
+| `ask_agent` | await | Publica `Question` con correlation id al destino y suspende el burst. Cualquier mensaje al origen con el mismo correlation id cuenta como `Answer`. Timeout sintético según `Limits.AwaitTimeoutSeconds`. |
+
+Para añadir una skill: implementa `IAgentSkill`, regístrala en `Program.cs` como `AddSingleton<IAgentSkill, MySkill>()`, opcionalmente decláranla en `allowedSkills` del agente. El runtime la documenta automáticamente al LLM en el system prompt.
+
+### Límites y rate limiting
+
+`Horizon:Althes:Limits`:
+
+- `MaxActionsPerHour` (global o sobrecargado por agente vía `MaxActionsPerHour` en su definición). Ventana deslizante en memoria (se resetea al reiniciar — decisión v1).
+- `MaxRequestSeconds`: timeout duro por llamada LLM/skill.
+- `MaxConcurrentLlmCalls`: cupo global (placeholder, semáforo aún no aplicado en v1).
+- `MaxBurstTurns`: máximo de turnos LLM por un único item de inbox.
+- `AwaitTimeoutSeconds`: tras este tiempo sin respuesta, se inyecta un `Timeout` sintético al inbox del agente que esperaba.
+
+### Operaciones disponibles (canal `althes:{projectId}`)
+
+Todas autenticadas (`althes.user` / `admin`):
+
+- `althes.agents.list`, `althes.agents.send`, `althes.agents.newRun`
+- `althes.runs.list`, `althes.runs.get`
+- `althes.userQueries.list`, `althes.userQueries.answer`
+
+Cliente recomendado: `HorizonAlthesClient(events, projectId, token)`. No reimplementes los requests en cada app.
+
+### Puesta en marcha
+
+1. Crear API key Identity con rol `althes.user` y exportarla como `ALTHES_API_KEY` (sólo necesaria si el contenedor a su vez consume servicios autenticados; la sección de handlers ya valida el token del cliente).
+2. Subir el archivo `{ProjectId}.agents.json` a Autoconfig en el nodo indicado por `HORIZON_NODE_NAME`, app `Althes`, versión coincidente con la del assembly de la app (formato `Major.Minor.Patch`).
+3. `docker compose -f docker-compose.local.yml up --build althes` (puerto 5200, health en `/health`).
+4. Para correr varios proyectos: levantar varios contenedores con `ALTHES_PROJECT_ID` distinto y archivos `{ProjectId}.agents.json` separados en Autoconfig.
+
+## Autoconfig
 
 Identity tiene UI propia y handlers IO. El rol administrativo compartido es `IdentityChannels.AdminRole` (`"admin"`).
 
@@ -331,12 +421,13 @@ Reglas:
 
 ## Tests
 
-El árbol `test/` tiene cuatro proyectos unitarios incluidos en `Armali.Horizon.slnx`:
+El árbol `test/` tiene cinco proyectos unitarios incluidos en `Armali.Horizon.slnx`:
 
 - `Armali.Horizon.Core.Tests`
 - `Armali.Horizon.IO.Tests`
 - `Armali.Horizon.Segaris.Tests`
 - `Armali.Horizon.Autoconfig.Tests`
+- `Armali.Horizon.Althes.Tests`
 
 Más un proyecto de smoke / integración **fuera** de la solución principal:
 
