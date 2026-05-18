@@ -1,0 +1,54 @@
+﻿@* HorizonFloatingPanel - panel flotante que se ancla a una esquina y se
+   muestra/oculta con un botón "toggle" siempre visible. Útil para listas
+   contextuales como "agentes del proyecto" o "filtros". *@
+
+<div class=@($"fixed {AnchorClasses} z-40 flex flex-col items-end gap-2")>
+    @if (_open && ChildContent is not null)
+    {
+        <div class=@($"w-72 max-h-[60vh] overflow-y-auto bg-hz-styx text-hz-arendelle rounded-xl shadow-2xl p-4 font-hz-text {ContentClasses}")>
+            @if (!string.IsNullOrEmpty(Title))
+            {
+                <div class="flex items-center justify-between mb-3">
+                    <span class="font-hz-special uppercase text-xs tracking-wide text-hz-meridian">@Title</span>
+                    <button type="button"
+                            class="text-hz-gray hover:text-hz-arendelle cursor-pointer"
+                            @onclick="Toggle">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            }
+            @ChildContent
+        </div>
+    }
+    <button type="button"
+            class=@($"h-12 w-12 rounded-full bg-{ButtonColor} text-hz-arendelle shadow-2xl flex items-center justify-center cursor-pointer hover:opacity-90")
+            @onclick="Toggle">
+        <i class=@($"fa-solid {(_open ? "fa-xmark" : Icon)} text-lg")></i>
+    </button>
+</div>
+
+@code {
+    /// <summary>Esquina de anclaje: <c>bottom-right</c> (default), <c>bottom-left</c>, <c>top-right</c>, <c>top-left</c>.</summary>
+    [Parameter] public string Anchor { get; set; } = "bottom-right";
+    [Parameter] public string Icon { get; set; } = "fa-list";
+    [Parameter] public string ButtonColor { get; set; } = "hz-apollo";
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public string ContentClasses { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    /// <summary>Estado inicial: abierto o cerrado.</summary>
+    [Parameter] public bool InitiallyOpen { get; set; }
+    
+    private bool _open;
+    
+    private string AnchorClasses => Anchor switch
+    {
+        "bottom-left" => "bottom-6 left-6 items-start",
+        "top-right"   => "top-6 right-6",
+        "top-left"    => "top-6 left-6 items-start",
+        _             => "bottom-6 right-6",
+    };
+    
+    protected override void OnInitialized() => _open = InitiallyOpen;
+    private void Toggle() => _open = !_open;
+}
+

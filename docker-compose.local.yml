@@ -175,3 +175,4 @@ volumes:
   segaris-data:
   autoconfig-data:
   althes-data:
+  althes-ui-data:

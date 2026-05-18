@@ -1,0 +1,61 @@
+﻿@* HorizonChatBubble - burbuja individual de un feed de chat.
+   Direction "Outgoing" se alinea a la izquierda (mensaje de un agente hacia el usuario),
+   "Incoming" a la derecha (mensaje del usuario hacia el agente). El parámetro
+   IsQuestion resalta visualmente preguntas con una acción "responder". *@
+
+<div class=@($"flex {(IsFromUser ? "justify-end" : "justify-start")} w-full")>
+    <div class=@($"max-w-[70%] flex flex-col gap-1 {(IsFromUser ? "items-end" : "items-start")}")>
+        @if (!IsFromUser)
+        {
+            <div class="text-xs font-bold text-hz-meridian font-hz-special uppercase tracking-wide">
+                @Sender
+            </div>
+        }
+        <div class=@($"px-4 py-2 rounded-2xl shadow font-hz-text text-sm whitespace-pre-wrap break-words " +
+                     (IsFromUser
+                         ? "bg-hz-apollo text-hz-arendelle rounded-tr-sm"
+                         : IsQuestion && !IsAnswered
+                             ? "bg-hz-sol text-hz-arendelle rounded-tl-sm"
+                             : "bg-hz-spartan text-hz-arendelle rounded-tl-sm"))>
+            @if (IsQuestion)
+            {
+                <div class="flex items-center gap-2 mb-1">
+                    <i class="fa-solid fa-circle-question"></i>
+                    <span class="text-[10px] uppercase font-hz-special">
+                        @(IsAnswered ? "pregunta respondida" : "pregunta pendiente")
+                    </span>
+                </div>
+            }
+            @Content
+        </div>
+        <div class="flex items-center gap-3 text-[10px] text-hz-gray">
+            <span>@Timestamp.ToLocalTime().ToString("HH:mm")</span>
+            @if (IsQuestion && !IsAnswered && OnReply.HasDelegate)
+            {
+                <button type="button"
+                        class="text-hz-apollo hover:text-hz-meridian uppercase font-hz-special cursor-pointer"
+                        @onclick="OnReply">
+                    <i class="fa-solid fa-reply mr-1"></i>responder
+                </button>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>Nombre visible del autor (agente o "Tú"/"user").</summary>
+    [Parameter] public string Sender { get; set; } = "";
+    /// <summary>Contenido textual del mensaje.</summary>
+    [Parameter] public string Content { get; set; } = "";
+    /// <summary>True si el mensaje proviene del usuario humano (se alinea a la derecha).</summary>
+    [Parameter] public bool IsFromUser { get; set; }
+    /// <summary>True si el mensaje es una pregunta de un agente al usuario.</summary>
+    [Parameter] public bool IsQuestion { get; set; }
+    /// <summary>True si la pregunta ya fue respondida (sólo aplica si <see cref="IsQuestion"/>).</summary>
+    [Parameter] public bool IsAnswered { get; set; }
+    /// <summary>Marca de tiempo a mostrar (formato HH:mm en local).</summary>
+    [Parameter] public DateTime Timestamp { get; set; } = DateTime.UtcNow;
+    /// <summary>Acción "responder" para preguntas pendientes. Opcional.</summary>
+    [Parameter] public EventCallback OnReply { get; set; }
+}
+

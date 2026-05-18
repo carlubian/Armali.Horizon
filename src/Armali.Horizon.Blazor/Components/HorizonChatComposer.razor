@@ -1,0 +1,134 @@
+﻿@* HorizonChatComposer - editor de mensaje para un chat tipo Althes.
+   Soporta dos modos exclusivos:
+     1) "Responder a pregunta": el caller fija ReplyTo y la skill resultante
+        es "respuesta libre". El composer muestra un chip con la pregunta y
+        emite OnReply al enviar.
+     2) "Mensaje nuevo": el texto debe empezar por @AgentName válido (presente
+        en AvailableMentions). Sólo la PRIMERA mención se interpreta; el resto
+        es texto literal. Emite OnSend(agentName, contentSinMention) al enviar.
+
+   El botón Enviar permanece deshabilitado mientras la validación falle. *@
+
+<div class="flex flex-col gap-2 bg-hz-styx rounded-xl p-3 shadow-xl">
+
+    @* Chip de "respondiendo a:" si hay reply activo *@
+    @if (!string.IsNullOrEmpty(ReplyTo))
+    {
+        <div class="flex items-center gap-2 px-3 py-2 rounded-lg bg-hz-sol/30 text-hz-arendelle text-xs">
+            <i class="fa-solid fa-reply"></i>
+            <span class="font-bold uppercase font-hz-special text-[10px]">respondiendo a @ReplyToSender:</span>
+            <span class="truncate flex-1">@ReplyTo</span>
+            <button type="button"
+                    class="text-hz-tribunal hover:text-hz-arendelle cursor-pointer"
+                    @onclick="OnCancelReply">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+    }
+
+    <HorizonInputTextArea @bind-Text="Text"
+                          Placeholder="@PlaceholderText"
+                          Rows="3"
+                          OnSubmit="@TrySend" />
+
+    <div class="flex items-center justify-between gap-3">
+        <div class="text-xs text-hz-gray font-hz-text">
+            @if (!string.IsNullOrEmpty(ValidationHint))
+            {
+                <span class="text-hz-tribunal">
+                    <i class="fa-solid fa-triangle-exclamation"></i> @ValidationHint
+                </span>
+            }
+            else if (string.IsNullOrEmpty(ReplyTo))
+            {
+                <span>Empieza por <code>@@AgenteName</code> para dirigir el mensaje.</span>
+            }
+        </div>
+        <HorizonInlineButton Color="@(CanSend ? "hz-apollo" : "hz-gray")"
+                             Icon="fa-paper-plane"
+                             Caption="Enviar"
+                             OnClick="@TrySend" />
+    </div>
+</div>
+
+@code {
+    // ── Estado del input ─────────────────────────────────────────
+    [Parameter] public string Text { get; set; } = "";
+    [Parameter] public EventCallback<string> TextChanged { get; set; }
+
+    // ── Modo "respondiendo a pregunta" ───────────────────────────
+    /// <summary>Texto de la pregunta a la que se está respondiendo (null = modo libre).</summary>
+    [Parameter] public string? ReplyTo { get; set; }
+    /// <summary>Nombre del agente que planteó la pregunta (para el chip).</summary>
+    [Parameter] public string? ReplyToSender { get; set; }
+    [Parameter] public EventCallback OnCancelReply { get; set; }
+    /// <summary>Se dispara al enviar una respuesta a la pregunta activa.</summary>
+    [Parameter] public EventCallback<string> OnReply { get; set; }
+
+    // ── Modo "mensaje nuevo con mención" ─────────────────────────
+    /// <summary>Nombres válidos de agentes que pueden ser mencionados con @.</summary>
+    [Parameter] public IReadOnlyCollection<string> AvailableMentions { get; set; } = [];
+    /// <summary>Dispara con (agentName, contenidoSinLaPrimeraMencion).</summary>
+    [Parameter] public EventCallback<(string Agent, string Content)> OnSend { get; set; }
+    
+    private string PlaceholderText => ReplyTo is not null
+        ? "Escribe tu respuesta…"
+        : "@AgenteName tu mensaje";
+    
+    /// <summary>Valida el texto y devuelve hint a mostrar (string vacío = OK).</summary>
+    private string ValidationHint => Validate(out _, out _);
+    
+    private bool CanSend => string.IsNullOrEmpty(ValidationHint) && !string.IsNullOrWhiteSpace(Text);
+    
+    /// <summary>
+    /// Valida el texto actual. En modo responder, basta con que tenga texto.
+    /// En modo libre, debe empezar por <c>@agente</c> donde agente está en la lista.
+    /// </summary>
+    private string Validate(out string agent, out string rest)
+    {
+        agent = "";
+        rest = Text ?? "";
+        var trimmed = (Text ?? "").TrimStart();
+        if (string.IsNullOrWhiteSpace(trimmed)) return "Escribe un mensaje.";
+        
+        // Modo respuesta: no hace falta mención.
+        if (ReplyTo is not null) return "";
+        
+        if (!trimmed.StartsWith('@'))
+            return "El mensaje debe empezar por @AgenteName.";
+        
+        // Primera palabra tras la @
+        var space = trimmed.IndexOfAny([' ', '\n', '\t']);
+        var name = space < 0 ? trimmed[1..] : trimmed[1..space];
+        if (string.IsNullOrEmpty(name))
+            return "Indica el nombre del agente después de @.";
+        
+        var match = AvailableMentions.FirstOrDefault(n =>
+            string.Equals(n, name, StringComparison.OrdinalIgnoreCase));
+        if (match is null)
+            return $"El agente '@{name}' no existe en este proyecto.";
+        
+        agent = match;
+        rest = (space < 0 ? "" : trimmed[(space + 1)..]).TrimStart();
+        return "";
+    }
+    
+    private async Task TrySend()
+    {
+        var hint = Validate(out var agent, out var rest);
+        if (!string.IsNullOrEmpty(hint) || string.IsNullOrWhiteSpace(Text)) return;
+        
+        if (ReplyTo is not null)
+        {
+            await OnReply.InvokeAsync(Text.Trim());
+        }
+        else
+        {
+            await OnSend.InvokeAsync((agent, rest));
+        }
+        
+        Text = "";
+        await TextChanged.InvokeAsync(Text);
+    }
+}
+

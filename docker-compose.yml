@@ -154,3 +154,26 @@ services:
       - identity
       - autoconfig
     restart: unless-stopped
+
+  # ─── Althes UI ─────────────────────────────────────────────────────────────────
+  # Frontend Blazor Server para gestionar instancias Althes y sus conversaciones.
+  althes-ui:
+    image: olyssia.azurecr.io/armali-horizon-althes-ui:latest
+    container_name: horizon-althes-ui
+    ports:
+      - "5210:5210"
+    volumes:
+      - /data/volumes/althes-ui:/persistence
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - Horizon__ConnectionStrings__AlthesUI=Data Source=/persistence/althes-ui.db
+      - Horizon__Events__Endpoint=horizon-redis:6379
+      - Horizon__Events__DefaultTimeoutSeconds=30
+      - Horizon__Logging__Endpoint=${HORIZON_SEQ_ENDPOINT:-http://node1.armali.com:5341}
+      - Horizon__Logging__ApiKey=${HORIZON_SEQ_APIKEY:-}
+      - Horizon__Logging__MinimumLevel=Information
+    depends_on:
+      - redis
+      - identity
+    restart: unless-stopped
+

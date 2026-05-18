@@ -1,0 +1,33 @@
+﻿@* HorizonInputTextArea - textarea multilínea con bind two-way.
+   Misma estética que HorizonInputText, con altura mínima en filas y opción de auto-resize. *@
+
+<textarea class=@($"rounded-xl bg-hz-styx text-hz-arendelle placeholder:text-hz-gray font-hz-text shadow-xl px-2 py-2 resize-none w-full {ExtraClasses}")
+          rows="@Rows"
+          placeholder="@Placeholder"
+          value="@Text"
+          @oninput="@OnTextChanged"
+          @onkeydown="@OnKeyDown"></textarea>
+
+@code {
+    [Parameter] public string Placeholder { get; set; } = "Escribe aquí…";
+    [Parameter] public string Text { get; set; } = "";
+    [Parameter] public EventCallback<string> TextChanged { get; set; }
+    [Parameter] public int Rows { get; set; } = 3;
+    [Parameter] public string ExtraClasses { get; set; } = "";
+    /// <summary>Disparado al pulsar Enter sin Shift (atajo de envío).</summary>
+    [Parameter] public EventCallback OnSubmit { get; set; }
+
+    private Task OnTextChanged(ChangeEventArgs e)
+    {
+        Text = e.Value?.ToString() ?? "";
+        return TextChanged.InvokeAsync(Text);
+    }
+
+    private Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey && OnSubmit.HasDelegate)
+            return OnSubmit.InvokeAsync();
+        return Task.CompletedTask;
+    }
+}
+

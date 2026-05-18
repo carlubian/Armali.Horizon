@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/Armali.Horizon.Althes/Armali.Horizon.Althes.csproj" />
+    <Project Path="src/Armali.Horizon.Althes.UI/Armali.Horizon.Althes.UI.csproj" />
     <Project Path="src/Armali.Horizon.Autoconfig/Armali.Horizon.Autoconfig.csproj" />
     <Project Path="src/Armali.Horizon.Blazor/Armali.Horizon.Blazor.csproj" />
     <Project Path="src/Armali.Horizon.Contracts/Armali.Horizon.Contracts.csproj" />

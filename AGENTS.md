@@ -54,6 +54,8 @@ MCP
 - Ejecutar Autoconfig: `dotnet run --project src/Armali.Horizon.Autoconfig`
 - Ejecutar Identity: `dotnet run --project src/Armali.Horizon.Identity`
 - Ejecutar MCP: `dotnet run --project src/Armali.Horizon.MCP`
+- Ejecutar Althes: `dotnet run --project src/Armali.Horizon.Althes`
+- Ejecutar Althes UI: `dotnet run --project src/Armali.Horizon.Althes.UI`
 - Tests: `dotnet test Armali.Horizon.slnx /p:SkipTailwindBuild=true`
 - Migraciones EF: `dotnet ef migrations add <Name> --project src/Armali.Horizon.<App>`
 - Docker imagen individual: `docker build -f src/Armali.Horizon.<App>/Dockerfile .`
@@ -82,6 +84,8 @@ Puertos actuales:
 | Segaris | 5122 |
 | Autoconfig | 5004 |
 | MCP | 5180 |
+| Althes | 5200 |
+| Althes UI | 5210 |
 | Redis | 6379 |
 
 Variables relevantes: `HORIZON_SEQ_ENDPOINT`, `HORIZON_SEQ_APIKEY`, `HORIZON_NODE_NAME`, `DATALAKE_ACCOUNT_KEY`, `IDENTITY_SEED_USER`, `IDENTITY_SEED_PASSWORD`, `ALTHES_PROJECT_ID`, `ALTHES_API_KEY`, `OPENAI_API_KEY`.
@@ -479,6 +483,63 @@ Para añadir un nuevo smoke test:
 2. Reutiliza `Events`, `HorizonAuthClient`, `HorizonSegarisClient`, `HorizonAutoconfigClient` ya configurados.
 3. Si dependes de un puerto/endpoint nuevo, expónlo como variable de entorno `SMOKE_*` con default a `localhost`.
 4. No introduzcas dependencias con Data Lake ni datos seed específicos: usa operaciones que funcionen sobre BD vacía.
+
+## Althes UI
+
+`Armali.Horizon.Althes.UI` (puerto **5210**) es la interfaz web Blazor Server para gestionar instancias Althes y sus conversaciones. A diferencia del resto de apps, **no es un ejecutable backend**: no tiene handlers IO ni base de datos de dominio. Su única persistencia es una SQLite local (`althes-ui.db`) con la tabla `AlthesProject`.
+
+### Modelo de proyectos
+
+`AlthesProject` guarda la conexión a una instancia:
+
+| Campo | Descripción |
+|---|---|
+| `Name` | Nombre para mostrar |
+| `ProjectId` | `ALTHES_PROJECT_ID` del contenedor Althes |
+| `ApiKey` | API key Identity con rol `althes.user` (no se devuelve en claro tras su creación) |
+
+Un único Redis global conecta la UI con todos los proyectos (topología A). La UI usa `AlthesConnectionManager` para mantener un `HorizonAlthesClient` por `ProjectId`.
+
+Reglas de acceso:
+- Cualquier usuario con rol `althes.user` puede ver proyectos y conversaciones.
+- **Solo `admin`** puede crear, editar o borrar proyectos (incluida la API key).
+- Borrar un proyecto sólo elimina la entrada local; no toca el contenedor Althes.
+
+### Páginas
+
+- `Home (/)`  — dos cards: Projects / Conversations.
+- `Projects (/projects)` — CRUD de `AlthesProject` con `HorizonTable` + `HorizonPopup`. API key oculta tras guardado.
+- `Conversations (/conversations?pid=X)` — interfaz de chat:
+  - **Columna izquierda**: `HorizonTreeView` con `Project → Conversation`. Badge de preguntas pendientes. Botón "Nueva conversación". Botón eliminar conversación (solo admin).
+  - **Área principal**: `HorizonChatLog` con `HorizonChatBubble`s diferenciadas por visibilidad. `HorizonFloatingPanel` con lista de agentes y estado. `HorizonChatComposer` con soporte de `@mención` para mensajes libres y modo "Respondiendo a:" para `ask_user`.
+
+### Servicios propios
+
+- `AlthesProjectStore` — CRUD de `AlthesProject` sobre SQLite.
+- `AlthesConnectionManager` — singleton con un `HorizonAlthesClient` por `ProjectId`.
+- `AlthesLiveSubscription` — scoped; suscribe al canal `althes:{projectId}:user` de cada proyecto y dispara `event Action<string, AgentInboxMessage>` a la página Conversations.
+
+### Estructura de archivos
+
+```
+src/Armali.Horizon.Althes.UI/
+  AlthesUiDbContext.cs
+  Program.cs
+  Dockerfile
+  Model/            AlthesProject.cs, PopupIntent.cs
+  Migrations/       Initial
+  Services/         AlthesProjectStore.cs, AlthesConnectionManager.cs, AlthesLiveSubscription.cs
+  Components/       App.razor, Routes.razor, _Imports.razor
+  Components/Pages/ Home.razor, Projects.razor, Conversations.razor, NotFound.razor
+  wwwroot/          app.css, tailwind.css (generado)
+```
+
+### Puesta en marcha
+
+1. Todos los proyectos Althes deben estar accesibles vía el mismo Redis global.
+2. Cada proyecto necesita una API key Identity con rol `althes.user` (ver sección Althes).
+3. Al crear un `AlthesProject` en la UI, introducir esa API key — solo admins lo verán/editarán.
+4. `docker compose -f docker-compose.local.yml up --build althes-ui` (puerto 5210).
 
 ## Checklist Al Terminar
 

@@ -1,0 +1,27 @@
+﻿@* HorizonBadge - contador o etiqueta pequeña con color de acento.
+   Pensado para indicar "N pendientes", estado o tipo de un item. *@
+
+@if (Visible)
+{
+    <span class=@($"inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold uppercase font-hz-special text-hz-arendelle bg-{Color} {ExtraClasses}")>
+        @if (!string.IsNullOrEmpty(Icon))
+        {
+            <i class=@($"fa-solid {Icon} mr-1 text-[10px]")></i>
+        }
+        @ChildContent
+        @if (ChildContent is null)
+        {
+            @Text
+        }
+    </span>
+}
+
+@code {
+    [Parameter] public string Color { get; set; } = "hz-opera";
+    [Parameter] public string Text { get; set; } = "";
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public bool Visible { get; set; } = true;
+    [Parameter] public string ExtraClasses { get; set; } = "";
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}
+
