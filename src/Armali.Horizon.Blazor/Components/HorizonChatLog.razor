@@ -1,0 +1,50 @@
+﻿@* HorizonChatLog - contenedor scrollable de mensajes con auto-scroll al final
+   cuando llegan novedades. Acepta cualquier ChildContent (típicamente HorizonChatBubble). *@
+
+@inject Microsoft.JSInterop.IJSRuntime JS
+
+<div id="@_id"
+     class=@($"flex-1 overflow-y-auto flex flex-col gap-3 p-4 bg-hz-gray-light rounded-xl {ExtraClasses}")>
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    @if (Empty && EmptyTemplate is not null)
+    {
+        <div class="flex-1 flex items-center justify-center text-hz-gray font-hz-text">
+            @EmptyTemplate
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public RenderFragment? EmptyTemplate { get; set; }
+    /// <summary>Si true, oculta hijos y muestra el EmptyTemplate.</summary>
+    [Parameter] public bool Empty { get; set; }
+    /// <summary>Cuando este valor cambia, se hace scroll al final automáticamente.</summary>
+    [Parameter] public object? ScrollTrigger { get; set; }
+    [Parameter] public string ExtraClasses { get; set; } = "";
+    
+    private readonly string _id = $"hz-chatlog-{Guid.NewGuid():N}";
+    private object? _lastScroll;
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender || !Equals(_lastScroll, ScrollTrigger))
+        {
+            _lastScroll = ScrollTrigger;
+            // Scroll al fondo mediante JS interop puntual; tolera fallos si el JS
+            // todavía no está cargado (prerender).
+            try
+            {
+                await Microsoft.JSInterop.JSRuntimeExtensions.InvokeVoidAsync(JS, "eval",
+                    $"(function(){{var el=document.getElementById('{_id}');if(el){{el.scrollTop=el.scrollHeight;}}}})()");
+            }
+            catch { /* prerender u otro escenario sin DOM */ }
+        }
+    }
+}
+
+
+

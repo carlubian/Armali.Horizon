@@ -1,0 +1,32 @@
+﻿@page "/"
+@inject NavigationManager Nav
+
+<HorizonAuthentication @bind-Identity="CurrentUser"/>
+<HorizonLayout AppName="Althes" PageName="@PageTitle">
+    <Sidebar></Sidebar>
+    <SidebarBottom></SidebarBottom>
+    <Body>
+        <div class="grid grid-cols-4 h-[78vh] items-center justify-center content-center">
+            <div/>
+            <HorizonCard Title="Projects" Image="/images/server.png" OnClick="@(() => Nav.NavigateTo("/projects"))"/>
+            <HorizonCard Title="Conversations" Image="/images/chat.png" OnClick="@(() => Nav.NavigateTo("/conversations"))"/>
+        </div>
+    </Body>
+</HorizonLayout>
+
+@code {
+    private HorizonIdentity? CurrentUser { get; set; }
+    
+    private static readonly string Version =
+        System.Reflection.Assembly.GetEntryAssembly()?.GetName().Version?.ToString(3) ?? "0.0.0";
+    
+    private string PageTitle
+    {
+        get
+        {
+            var name = CurrentUser?.UserName;
+            return string.IsNullOrWhiteSpace(name) ? $"v{Version}" : $"v{Version} - {name}";
+        }
+    }
+}
+

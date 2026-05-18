@@ -1,0 +1,45 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+        <DockerDefaultTargetOS>Linux</DockerDefaultTargetOS>
+        <Version>1.0.0</Version>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Content Include="..\..\.dockerignore">
+            <Link>.dockerignore</Link>
+        </Content>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\Armali.Horizon.Blazor\Armali.Horizon.Blazor.csproj" />
+        <ProjectReference Include="..\Armali.Horizon.Contracts\Armali.Horizon.Contracts.csproj" />
+        <ProjectReference Include="..\Armali.Horizon.IO\Armali.Horizon.IO.csproj" />
+        <ProjectReference Include="..\Armali.Horizon.Core\Armali.Horizon.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.AspNetCore.App.Internal.Assets" Version="10.0.7" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.7" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.7">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <_ContentIncludedByDefault Remove="Components\Layout\MainLayout.razor" />
+        <_ContentIncludedByDefault Remove="Components\Layout\NavMenu.razor" />
+        <_ContentIncludedByDefault Remove="Components\Layout\ReconnectModal.razor" />
+    </ItemGroup>
+
+    <Target Name="TailwindBuild" BeforeTargets="Build" Condition="'$(SkipTailwindBuild)' != 'true'">
+        <Exec Command=".\tailwindcss.exe -i .\wwwroot\app.css -o .\wwwroot\tailwind.css --minify" />
+    </Target>
+
+</Project>
+

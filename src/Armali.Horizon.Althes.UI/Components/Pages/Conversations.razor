@@ -1,0 +1,369 @@
+﻿@page "/conversations"
+
+@inject AlthesProjectStore Store
+@inject AlthesConnectionManager Connections
+@inject AlthesLiveSubscription Live
+
+<HorizonAuthentication @bind-Identity="CurrentUser" OnAuthenticated="LoadData"/>
+
+<HorizonLayout AppName="Althes" PageName="Conversations">
+    <Sidebar>
+        @if (ActiveProject is not null)
+        {
+            <HorizonHeroButton Color="hz-opera" Icon="fa-plus" Caption="New Conv."
+                               OnClick="@StartNewConversation"/>
+        }
+    </Sidebar>
+    <SidebarBottom>
+        @if (ActiveProject is not null)
+        {
+            <HorizonHeroButton Color="hz-spartan" Icon="fa-rotate" Caption="Refresh"
+                               OnClick="@RefreshConversation"/>
+        }
+    </SidebarBottom>
+    <Body>
+        <div class="flex gap-4 h-[78vh]">
+
+            @* ── Panel izquierdo: árbol de proyectos y conversaciones ── *@
+            <div class="w-64 shrink-0 flex flex-col bg-hz-styx rounded-xl p-2 overflow-y-auto">
+                <div class="text-xs font-hz-special uppercase text-hz-meridian mb-2 px-2">Proyectos</div>
+                <HorizonTreeView Items="@AllProjects">
+                    @foreach (var proj in AllProjects)
+                    {
+                        var projExpanded = ExpandedProjects.Contains(proj.ProjectId);
+                        var convs = ConversationsByProject.GetValueOrDefault(proj.ProjectId) ?? [];
+                        <HorizonTreeNode Text="@proj.Name"
+                                         Icon="fa-sitemap"
+                                         IconColor="text-hz-meridian"
+                                         HasChildren="@(convs.Count > 0)"
+                                         IsExpanded="@projExpanded"
+                                         IsExpandedChanged="@(v => ToggleProject(proj.ProjectId, v))"
+                                         IsSelectable="false">
+                            @foreach (var conv in convs)
+                            {
+                                var isSelected = conv.Id == ActiveConversationId && proj.ProjectId == ActiveProject?.ProjectId;
+                                var hasPending = conv.PendingQuestions > 0;
+                                <HorizonTreeNode Text="@ConvLabel(conv)"
+                                                 Icon="@(hasPending ? "fa-circle-question" : "fa-message")"
+                                                 IconColor="@(hasPending ? "text-hz-sol" : "text-hz-gray")"
+                                                 HasChildren="false"
+                                                 IsSelectable="true"
+                                                 IsSelected="@isSelected"
+                                                 OnSelected="@(() => SelectConversation(proj, conv.Id))">
+                                    @if (hasPending)
+                                    {
+                                        <HorizonBadge Color="hz-sol" Text="@conv.PendingQuestions.ToString()"/>
+                                    }
+                                </HorizonTreeNode>
+                            }
+                        </HorizonTreeNode>
+                    }
+                </HorizonTreeView>
+                @* Botón eliminar conversación seleccionada *@
+                @if (!string.IsNullOrEmpty(ActiveConversationId) && CurrentUser?.HasRole("admin") == true)
+                {
+                    <div class="mt-auto pt-2">
+                        <button type="button"
+                                class="w-full text-xs text-hz-tribunal hover:text-hz-arendelle font-hz-special uppercase cursor-pointer flex items-center gap-1 px-2 py-1"
+                                @onclick="DeleteActiveConversation">
+                            <i class="fa-solid fa-trash"></i> Delete conversation
+                        </button>
+                    </div>
+                }
+            </div>
+
+            @* ── Panel derecho: chat de la conversación activa ── *@
+            <div class="flex-1 flex flex-col gap-3 overflow-hidden">
+                @if (string.IsNullOrEmpty(ActiveConversationId))
+                {
+                    <div class="flex-1 flex items-center justify-center text-hz-gray font-hz-text">
+                        <span>Selecciona o inicia una conversación.</span>
+                    </div>
+                }
+                else
+                {
+                    @* Feed de mensajes *@
+                    <HorizonChatLog ScrollTrigger="@_scrollTrigger" ExtraClasses="flex-1">
+                        <EmptyTemplate>
+                            <span>Esta conversación aún no tiene mensajes.</span>
+                        </EmptyTemplate>
+                        <ChildContent>
+                            @foreach (var msg in Messages)
+                            {
+                                var fromUser = msg.Visibility is "Incoming" or "Answer";
+                                var isQuestion = msg.Visibility == "Question";
+                                var isAnswered = msg.IsAnswered ?? false;
+                                <HorizonChatBubble Sender="@(fromUser ? "Tú" : msg.Sender)"
+                                                   Content="@msg.Content"
+                                                   IsFromUser="@fromUser"
+                                                   IsQuestion="@isQuestion"
+                                                   IsAnswered="@isAnswered"
+                                                   Timestamp="@msg.CreatedAt"
+                                                   OnReply="@(() => BeginReply(msg))"/>
+                            }
+                        </ChildContent>
+                    </HorizonChatLog>
+                    
+                    @* Compositor *@
+                    <div class="shrink-0">
+                        <HorizonChatComposer AvailableMentions="@AgentNames"
+                                             ReplyTo="@ReplyToText"
+                                             ReplyToSender="@ReplyToSender"
+                                             OnCancelReply="@CancelReply"
+                                             OnReply="@SendReply"
+                                             OnSend="@SendNew"/>
+                    </div>
+                }
+            </div>
+        </div>
+    </Body>
+</HorizonLayout>
+
+@* Panel flotante: lista de agentes del proyecto activo *@
+@if (ActiveProject is not null && AgentNames.Count > 0)
+{
+    <HorizonFloatingPanel Icon="fa-robot" ButtonColor="hz-apollo" Title="Agentes del proyecto">
+        <ul class="flex flex-col gap-1">
+            @foreach (var a in AgentDtos)
+            {
+                <li class="flex items-center gap-2 text-sm py-1">
+                    <i class="fa-solid fa-circle text-[6px] @(a.IsAwaiting ? "text-hz-sol" : a.ActiveRunId is not null ? "text-hz-tefiti" : "text-hz-gray")"></i>
+                    <span>@a.Name</span>
+                    @if (a.PendingInboxItems > 0)
+                    {
+                        <HorizonBadge Color="hz-opera" Text="@a.PendingInboxItems.ToString()"/>
+                    }
+                </li>
+            }
+        </ul>
+    </HorizonFloatingPanel>
+}
+
+@code {
+    [SupplyParameterFromQuery(Name = "pid")]
+    public string? InitialProjectId { get; set; }
+    
+    private HorizonIdentity? CurrentUser { get; set; }
+    
+    // ── Estado de proyectos/conversaciones ───────────────────────────────────
+    private List<AlthesProject> AllProjects { get; set; } = [];
+    private Dictionary<string, List<ConversationDto>> ConversationsByProject { get; set; } = new();
+    private HashSet<string> ExpandedProjects { get; set; } = new();
+    
+    // ── Conversación activa ──────────────────────────────────────────────────
+    private AlthesProject? ActiveProject { get; set; }
+    private string? ActiveConversationId { get; set; }
+    private List<ChatMessageDto> Messages { get; set; } = [];
+    private List<AlthesAgentDto> AgentDtos { get; set; } = [];
+    private IReadOnlyCollection<string> AgentNames => AgentDtos.Select(a => a.Name).ToList();
+    
+    // ── Compositor ───────────────────────────────────────────────────────────
+    private ChatMessageDto? ReplyToMsg { get; set; }
+    private string? ReplyToText => ReplyToMsg?.Content;
+    private string? ReplyToSender => ReplyToMsg?.Sender;
+    
+    // Trigger para scroll automático al fondo del chat
+    private object _scrollTrigger = new();
+    
+    // ────────────────────────────────────────────────────────────────────────
+    
+    private async Task LoadData()
+    {
+        AllProjects = await Store.ListAsync();
+        
+        // Suscribir live a todos los proyectos configurados
+        Live.OnMessage += OnLiveMessage;
+        Live.SubscribeAll(AllProjects.Select(p => p.ProjectId));
+        
+        // Cargar conversaciones de cada proyecto
+        foreach (var proj in AllProjects)
+        {
+            await LoadConversationsForProject(proj);
+            ExpandedProjects.Add(proj.ProjectId);
+        }
+        
+        // Si venimos de la url ?pid=X, seleccionamos ese proyecto y su conv activa
+        if (!string.IsNullOrEmpty(InitialProjectId))
+        {
+            var proj = AllProjects.FirstOrDefault(p => p.ProjectId == InitialProjectId);
+            if (proj is not null)
+            {
+                var convs = ConversationsByProject.GetValueOrDefault(proj.ProjectId);
+                var active = convs?.FirstOrDefault(c => c.Status == "Active") ?? convs?.FirstOrDefault();
+                if (active is not null) await SelectConversation(proj, active.Id);
+            }
+        }
+    }
+    
+    private async Task LoadConversationsForProject(AlthesProject proj)
+    {
+        if (CurrentUser is null) return;
+        var client = Connections.GetClient(proj.ProjectId, proj.ApiKey);
+        var resp = await client.ListConversationsAsync();
+        ConversationsByProject[proj.ProjectId] = resp.Success ? resp.Conversations : [];
+    }
+    
+    private async Task SelectConversation(AlthesProject proj, string convId)
+    {
+        if (CurrentUser is null) return;
+        ActiveProject = proj;
+        ActiveConversationId = convId;
+        ReplyToMsg = null;
+        
+        // Cargar mensajes y lista de agentes en paralelo
+        var client = Connections.GetClient(proj.ProjectId, proj.ApiKey);
+        var msgTask = client.GetConversationAsync(convId);
+        var agentsTask = client.ListAgentsAsync();
+        await Task.WhenAll(msgTask, agentsTask);
+        
+        Messages = msgTask.Result.Messages;
+        AgentDtos = agentsTask.Result.Success ? agentsTask.Result.Agents : [];
+        _scrollTrigger = new();
+        StateHasChanged();
+    }
+    
+    private void ToggleProject(string projectId, bool expanded)
+    {
+        if (expanded) ExpandedProjects.Add(projectId);
+        else ExpandedProjects.Remove(projectId);
+    }
+    
+    // ── Acciones de conversación ─────────────────────────────────────────────
+    
+    private async Task StartNewConversation()
+    {
+        if (ActiveProject is null || CurrentUser is null) return;
+        var client = Connections.GetClient(ActiveProject.ProjectId, ActiveProject.ApiKey);
+        await client.StartNewConversationAsync();
+        await LoadConversationsForProject(ActiveProject);
+        // Seleccionar la nueva conversación activa
+        var convs = ConversationsByProject.GetValueOrDefault(ActiveProject.ProjectId);
+        var newActive = convs?.FirstOrDefault(c => c.Status == "Active");
+        if (newActive is not null) await SelectConversation(ActiveProject, newActive.Id);
+        StateHasChanged();
+    }
+    
+    private async Task RefreshConversation()
+    {
+        if (ActiveProject is null || ActiveConversationId is null) return;
+        await SelectConversation(ActiveProject, ActiveConversationId);
+    }
+    
+    private async Task DeleteActiveConversation()
+    {
+        if (ActiveProject is null || ActiveConversationId is null) return;
+        var client = Connections.GetClient(ActiveProject.ProjectId, ActiveProject.ApiKey);
+        await client.DeleteConversationAsync(ActiveConversationId);
+        ActiveConversationId = null;
+        Messages = [];
+        await LoadConversationsForProject(ActiveProject);
+        StateHasChanged();
+    }
+    
+    // ── Envío de mensajes ────────────────────────────────────────────────────
+    
+    private void BeginReply(ChatMessageDto msg)
+    {
+        ReplyToMsg = msg;
+        StateHasChanged();
+    }
+    
+    private void CancelReply()
+    {
+        ReplyToMsg = null;
+        StateHasChanged();
+    }
+    
+    private async Task SendReply(string answer)
+    {
+        if (ActiveProject is null || ReplyToMsg?.UserQueryId is null) return;
+        var client = Connections.GetClient(ActiveProject.ProjectId, ActiveProject.ApiKey);
+        await client.AnswerUserQueryAsync(ReplyToMsg.UserQueryId, answer);
+        ReplyToMsg = null;
+        // Añadir la respuesta optimísticamente al feed local
+        Messages.Add(new ChatMessageDto
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            RunId = ReplyToMsg?.RunId ?? "",
+            Sender = "user",
+            Content = answer,
+            Visibility = "Answer",
+            CreatedAt = DateTime.UtcNow,
+        });
+        _scrollTrigger = new();
+        StateHasChanged();
+    }
+    
+    private async Task SendNew((string Agent, string Content) msg)
+    {
+        if (ActiveProject is null || CurrentUser is null) return;
+        var client = Connections.GetClient(ActiveProject.ProjectId, ActiveProject.ApiKey);
+        await client.SendMessageAsync(msg.Agent, msg.Content);
+        // Añadir optimísticamente al feed local
+        Messages.Add(new ChatMessageDto
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            RunId = "",
+            Sender = "user",
+            Content = $"@{msg.Agent} {msg.Content}",
+            Visibility = "Incoming",
+            CreatedAt = DateTime.UtcNow,
+        });
+        _scrollTrigger = new();
+        StateHasChanged();
+    }
+    
+    // ── Live subscription ─────────────────────────────────────────────────────
+    
+    private void OnLiveMessage(string projectId, AgentInboxMessage msg)
+    {
+        // Actualizar badge de conversación afectada
+        if (!string.IsNullOrEmpty(msg.ConversationId))
+        {
+            var convs = ConversationsByProject.GetValueOrDefault(projectId);
+            var conv = convs?.FirstOrDefault(c => c.Id == msg.ConversationId);
+            if (conv is not null && msg.Kind == AgentInboxKind.Question)
+                conv.PendingQuestions++;
+        }
+        
+        // Si la conversación activa recibe mensajes, añadirlos al feed
+        if (ActiveProject?.ProjectId == projectId && msg.ConversationId == ActiveConversationId)
+        {
+            var fromUser = msg.Kind == AgentInboxKind.Answer;
+            Messages.Add(new ChatMessageDto
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                RunId = msg.RunId ?? "",
+                Sender = fromUser ? "user" : msg.Sender,
+                Content = msg.Content,
+                Visibility = msg.Kind switch
+                {
+                    AgentInboxKind.Notify => "Outgoing",
+                    AgentInboxKind.Question => "Question",
+                    AgentInboxKind.Answer => "Answer",
+                    _ => "Outgoing",
+                },
+                CreatedAt = msg.CreatedAt,
+                UserQueryId = msg.UserQueryId,
+                IsAnswered = msg.Kind == AgentInboxKind.Answer,
+            });
+            _scrollTrigger = new();
+        }
+        
+        InvokeAsync(StateHasChanged);
+    }
+    
+    // ── Helpers ──────────────────────────────────────────────────────────────
+    
+    private static string ConvLabel(ConversationDto c)
+    {
+        var label = !string.IsNullOrEmpty(c.Name) ? c.Name : c.StartedAt.ToLocalTime().ToString("dd/MM HH:mm");
+        return c.Status == "Active" ? $"● {label}" : label;
+    }
+    
+    public void Dispose()
+    {
+        Live.OnMessage -= OnLiveMessage;
+    }
+}
+

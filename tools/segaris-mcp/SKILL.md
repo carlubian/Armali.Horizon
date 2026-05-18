@@ -1,6 +1,6 @@
 ---
 name: segaris-mcp
-description: Connect to the local Horizon/Segaris MCP server over Streamable HTTP for personal productivity and household/business modules. Use when Codex needs to authenticate with X-Horizon-Api-Key, verify who the Segaris user is, list available MCP tools, or query Segaris data such as projects, assets, Capex, Opex, travel, maintenance, inventory, Firebird/people records, Admin/processes, and Clothes/wardrobe records exposed by the server.
+description: Connect to the local Horizon/Segaris MCP server for personal productivity and household/business modules. Use when Codex needs to authenticate with X-Horizon-Api-Key, verify who the Segaris user is, list available MCP tools, or query Segaris data such as projects, budgets, assets, Capex, Opex, income, expenses, travel, maintenance, inventory, Firebird/people records, Admin/processes, and Clothes/wardrobe records exposed by the server.
 ---
 
 # Segaris MCP
