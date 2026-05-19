@@ -11,6 +11,8 @@ public class Agent
 {
     [Key]
     public string Name { get; set; } = string.Empty;
+    /// <summary>Descripción corta del rol del agente, visible para otros agentes.</summary>
+    public string? Description { get; set; }
     public string SystemPrompt { get; set; } = string.Empty;
     public string? Model { get; set; }
     public bool CarryOverSummary { get; set; }

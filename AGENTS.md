@@ -350,6 +350,7 @@ Cada instancia pide a Autoconfig el archivo `{ProjectId}.agents.json` desde el n
   "agents": [
     {
       "name": "planner",
+      "description": "Planifica tareas y coordina al resto de agentes.",
       "systemPrompt": "Eres un planificador...",
       "model": "gpt-4o-mini",
       "carryOverSummary": true,
@@ -360,6 +361,8 @@ Cada instancia pide a Autoconfig el archivo `{ProjectId}.agents.json` desde el n
   ]
 }
 ```
+
+`description` es una cadena corta que describe el rol del agente; se inyecta automáticamente en el system prompt de los demás agentes para que sepan con quién pueden hablar y para qué sirve cada uno. Si se omite, el prompt mostrará "(sin descripción)" junto al nombre.
 
 `allowedSkills` y `allowedRecipients` vacíos o ausentes = sin restricción. Si Autoconfig no responde, Althes intenta rehidratar desde la copia local que persiste en su SQLite.
 

@@ -22,6 +22,7 @@ public class AgentRuntime
 {
     // ── Dependencias ─────────────────────────────────────────────────
     private readonly AgentConfigEntry Definition;
+    private readonly IReadOnlyList<AgentConfigEntry> Peers;
     private readonly AgentInbox Inbox;
     private readonly IServiceProvider RootServices;
     private readonly AlthesOptions Options;
@@ -38,12 +39,14 @@ public class AgentRuntime
     
     public AgentRuntime(
         AgentConfigEntry definition,
+        IReadOnlyList<AgentConfigEntry> peers,
         AgentInbox inbox,
         IServiceProvider rootServices,
         IOptions<AlthesOptions> options,
         ILoggerFactory loggerFactory)
     {
         Definition = definition;
+        Peers = peers;
         Inbox = inbox;
         RootServices = rootServices;
         Options = options.Value;
@@ -288,6 +291,19 @@ public class AgentRuntime
         
         // System prompt = prompt del agente + instrucciones de formato de salida.
         var skillsDoc = string.Join("\n", available.Select(s => $"- {s.Name}: {s.Description} args={s.ArgsSchema}"));
+        
+        // Documentar los agentes compañeros visibles (filtrado por allowedRecipients).
+        var allowedRecipients = Definition.AllowedRecipients ?? [];
+        var visiblePeers = Peers
+            .Where(p => !string.Equals(p.Name, AgentName, StringComparison.OrdinalIgnoreCase))
+            .Where(p => allowedRecipients.Count == 0 || allowedRecipients.Contains(p.Name, StringComparer.OrdinalIgnoreCase))
+            .ToList();
+        var peersDoc = visiblePeers.Count > 0
+            ? "Agentes con los que puedes comunicarte (usa ask_agent o notify_agent):\n" +
+              string.Join("\n", visiblePeers.Select(p =>
+                  $"- {p.Name}: {(string.IsNullOrWhiteSpace(p.Description) ? "(sin descripción)" : p.Description)}"))
+            : "";
+        
         msgs.Add(new LlmMessage(LlmMessageRole.System, $$"""
 {{Definition.SystemPrompt}}
 
@@ -299,7 +315,7 @@ Para indicar que has terminado y quieres volver a esperar mensajes, responde:
 
 Skills disponibles:
 {{skillsDoc}}
-
+{{(peersDoc.Length > 0 ? "\n" + peersDoc + "\n" : "")}}
 Reglas:
 - No incluyas texto fuera del JSON.
 - Usa "think" para razonar; el resultado se añade al contexto sin efectos externos.

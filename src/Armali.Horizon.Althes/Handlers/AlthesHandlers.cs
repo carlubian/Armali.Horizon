@@ -27,7 +27,8 @@ public class ListAgentsHandler : IHorizonRequestHandler<ListAgentsRequest, ListA
             var rt = Host.GetRuntime(a.Name);
             return new AlthesAgentDto
             {
-                Name = a.Name, SystemPrompt = a.SystemPrompt, Model = a.Model,
+                Name = a.Name, Description = a.Description,
+                SystemPrompt = a.SystemPrompt, Model = a.Model,
                 CarryOverSummary = a.CarryOverSummary,
                 AllowedSkills = (a.AllowedSkills ?? []).ToArray(),
                 AllowedRecipients = (a.AllowedRecipients ?? []).ToArray(),

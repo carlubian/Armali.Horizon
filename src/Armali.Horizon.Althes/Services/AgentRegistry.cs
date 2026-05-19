@@ -100,6 +100,7 @@ public class AgentRegistry
                 Agents = cached.Select(a => new AgentConfigEntry
                 {
                     Name = a.Name,
+                    Description = a.Description,
                     SystemPrompt = a.SystemPrompt,
                     Model = a.Model,
                     CarryOverSummary = a.CarryOverSummary,
@@ -120,6 +121,7 @@ public class AgentRegistry
                 db.Agents.Add(new Agent
                 {
                     Name = a.Name,
+                    Description = a.Description,
                     SystemPrompt = a.SystemPrompt,
                     Model = a.Model,
                     CarryOverSummary = a.CarryOverSummary,
