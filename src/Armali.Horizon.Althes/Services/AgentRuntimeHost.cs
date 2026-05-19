@@ -76,7 +76,8 @@ public class AgentRuntimeHost : BackgroundService
         }
         
         // Por cada agente: crear inbox, suscribir su canal IO, lanzar runtime.
-        foreach (var def in Registry.All)
+        var allDefs = Registry.All.ToList();
+        foreach (var def in allDefs)
         {
             var inbox = Router.GetOrCreate(def.Name);
             var channel = AlthesChannels.AgentInbox(Options.ProjectId, def.Name);
@@ -84,7 +85,7 @@ public class AgentRuntimeHost : BackgroundService
             // Puente bus IO → inbox FIFO local.
             Events.Subscribe<AgentInboxMessage>(channel, msg => inbox.Enqueue(msg));
             
-            var runtime = new AgentRuntime(def, inbox, Services, MicrosoftOptions.Wrap(Options), LoggerFactory);
+            var runtime = new AgentRuntime(def, allDefs, inbox, Services, MicrosoftOptions.Wrap(Options), LoggerFactory);
             Runtimes.Add(runtime);
             RuntimeTasks.Add(Task.Run(() => runtime.RunLoopAsync(stoppingToken), stoppingToken));
             

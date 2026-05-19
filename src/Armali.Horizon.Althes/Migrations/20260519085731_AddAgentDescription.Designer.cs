@@ -3,6 +3,7 @@ using System;
 using Armali.Horizon.Althes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Armali.Horizon.Althes.Migrations
 {
     [DbContext(typeof(AlthesDbContext))]
-    partial class AlthesDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260519085731_AddAgentDescription")]
+    partial class AddAgentDescription
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.8");
