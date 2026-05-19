@@ -32,29 +32,39 @@
                     {
                         var projExpanded = ExpandedProjects.Contains(proj.ProjectId);
                         var convs = ConversationsByProject.GetValueOrDefault(proj.ProjectId) ?? [];
+                        var isProjActive = ActiveProject?.ProjectId == proj.ProjectId;
                         <HorizonTreeNode Text="@proj.Name"
-                                         Icon="fa-sitemap"
-                                         IconColor="text-hz-meridian"
-                                         HasChildren="@(convs.Count > 0)"
+                                         Icon="@(isProjActive ? "fa-circle-check" : "fa-sitemap")"
+                                         IconColor="@(isProjActive ? "text-hz-tefiti" : "text-hz-meridian")"
+                                         HasChildren="true"
                                          IsExpanded="@projExpanded"
                                          IsExpandedChanged="@(v => ToggleProject(proj.ProjectId, v))"
-                                         IsSelectable="false">
-                            @foreach (var conv in convs)
+                                         IsSelectable="true"
+                                         IsSelected="@isProjActive"
+                                         OnSelected="@(() => SelectProject(proj))">
+                            @if (convs.Count == 0)
                             {
-                                var isSelected = conv.Id == ActiveConversationId && proj.ProjectId == ActiveProject?.ProjectId;
-                                var hasPending = conv.PendingQuestions > 0;
-                                <HorizonTreeNode Text="@ConvLabel(conv)"
-                                                 Icon="@(hasPending ? "fa-circle-question" : "fa-message")"
-                                                 IconColor="@(hasPending ? "text-hz-sol" : "text-hz-gray")"
-                                                 HasChildren="false"
-                                                 IsSelectable="true"
-                                                 IsSelected="@isSelected"
-                                                 OnSelected="@(() => SelectConversation(proj, conv.Id))">
-                                    @if (hasPending)
-                                    {
-                                        <HorizonBadge Color="hz-sol" Text="@conv.PendingQuestions.ToString()"/>
-                                    }
-                                </HorizonTreeNode>
+                                <div class="text-xs text-hz-gray italic px-4 py-1">Sin conversaciones</div>
+                            }
+                            else
+                            {
+                                @foreach (var conv in convs)
+                                {
+                                    var isSelected = conv.Id == ActiveConversationId && proj.ProjectId == ActiveProject?.ProjectId;
+                                    var hasPending = conv.PendingQuestions > 0;
+                                    <HorizonTreeNode Text="@ConvLabel(conv)"
+                                                     Icon="@(hasPending ? "fa-circle-question" : "fa-message")"
+                                                     IconColor="@(hasPending ? "text-hz-sol" : "text-hz-gray")"
+                                                     HasChildren="false"
+                                                     IsSelectable="true"
+                                                     IsSelected="@isSelected"
+                                                     OnSelected="@(() => SelectConversation(proj, conv.Id))">
+                                        @if (hasPending)
+                                        {
+                                            <HorizonBadge Color="hz-sol" Text="@conv.PendingQuestions.ToString()"/>
+                                        }
+                                    </HorizonTreeNode>
+                                }
                             }
                         </HorizonTreeNode>
                     }
@@ -76,8 +86,16 @@
             <div class="flex-1 flex flex-col gap-3 overflow-hidden">
                 @if (string.IsNullOrEmpty(ActiveConversationId))
                 {
-                    <div class="flex-1 flex items-center justify-center text-hz-gray font-hz-text">
-                        <span>Selecciona o inicia una conversación.</span>
+                    <div class="flex-1 flex flex-col items-center justify-center text-hz-gray font-hz-text gap-2">
+                        @if (ActiveProject is not null)
+                        {
+                            <i class="fa-solid fa-comments text-3xl text-hz-meridian"></i>
+                            <span>Usa <strong class="text-hz-opera">New Conv.</strong> para iniciar una conversación en <strong>@ActiveProject.Name</strong>.</span>
+                        }
+                        else
+                        {
+                            <span>Selecciona un proyecto o conversación.</span>
+                        }
                     </div>
                 }
                 else
@@ -190,7 +208,10 @@
             {
                 var convs = ConversationsByProject.GetValueOrDefault(proj.ProjectId);
                 var active = convs?.FirstOrDefault(c => c.Status == "Active") ?? convs?.FirstOrDefault();
-                if (active is not null) await SelectConversation(proj, active.Id);
+                if (active is not null)
+                    await SelectConversation(proj, active.Id);
+                else
+                    await SelectProject(proj);
             }
         }
     }
@@ -201,6 +222,23 @@
         var client = Connections.GetClient(proj.ProjectId, proj.ApiKey);
         var resp = await client.ListConversationsAsync();
         ConversationsByProject[proj.ProjectId] = resp.Success ? resp.Conversations : [];
+    }
+    
+    private async Task SelectProject(AlthesProject proj)
+    {
+        ActiveProject = proj;
+        ActiveConversationId = null;
+        Messages = [];
+        ReplyToMsg = null;
+        
+        // Cargar lista de agentes del proyecto
+        var client = Connections.GetClient(proj.ProjectId, proj.ApiKey);
+        var agentsResp = await client.ListAgentsAsync();
+        AgentDtos = agentsResp.Success ? agentsResp.Agents : [];
+        
+        // Expandir el nodo del proyecto
+        ExpandedProjects.Add(proj.ProjectId);
+        StateHasChanged();
     }
     
     private async Task SelectConversation(AlthesProject proj, string convId)
