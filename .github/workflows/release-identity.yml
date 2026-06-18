@@ -44,7 +44,7 @@ jobs:
 
       # ── 3. Checkout del código ──────────────────────────────
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       # ── 4. Verificar que el checkout es HEAD de main ────────
       - name: Verificar HEAD de main
